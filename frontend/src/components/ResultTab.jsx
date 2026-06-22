@@ -1,5 +1,23 @@
+import { useState } from 'react';
+
+const SELLER_TYPE_LABEL = {
+  new: '새책',
+  aladinUsed: '알라딘 중고',
+  userUsed: '판매자 중고',
+  spaceUsed: '광활한우주점',
+};
+
+const SELLER_TYPE_COLOR = {
+  new: '#0066cc',
+  aladinUsed: '#e6003e',
+  userUsed: '#555',
+  spaceUsed: '#7b3fa0',
+};
+
 export default function ResultTab({ results }) {
-  if (!results || results.length === 0) {
+  const [expanded, setExpanded] = useState({});
+
+  if (!results) {
     return (
       <div style={styles.empty}>
         <p>분석 결과가 없습니다.</p>
@@ -10,115 +28,191 @@ export default function ResultTab({ results }) {
     );
   }
 
+  const { books = [], crawling = false } = results;
+
+  if (books.length === 0) {
+    return (
+      <div style={styles.empty}>
+        <p>크롤링 중...</p>
+      </div>
+    );
+  }
+
+  function toggleExpand(isbn13) {
+    setExpanded(prev => ({ ...prev, [isbn13]: !prev[isbn13] }));
+  }
+
   return (
     <div>
-      {results.map((combo, idx) => (
-        <div key={idx} style={styles.comboBox}>
-          {/* 조합 헤더 - 총 가격 / 할인율 강조 */}
-          <div style={styles.comboHeader}>
-            <div style={styles.comboRank}>#{idx + 1}</div>
-            <div style={styles.comboStat}>
-              <span style={styles.totalPrice}>{combo.totalCost?.toLocaleString()}원</span>
-              <span style={styles.discount}>평균 {combo.discountRate}% 할인</span>
-            </div>
-            <div style={styles.comboMeta}>
-              {combo.sellerSummary}
-            </div>
-          </div>
-
-          {/* 책별 테이블 */}
-          <table style={styles.table}>
-            <thead>
-              <tr style={styles.thead}>
-                <th style={styles.th}>표지</th>
-                <th style={styles.th}>책 제목</th>
-                <th style={styles.th}>등급</th>
-                <th style={styles.th}>판매처</th>
-                <th style={styles.th}>판매가</th>
-                <th style={styles.th}>배송비</th>
-                <th style={styles.th}>할인율</th>
-                <th style={styles.th}>링크</th>
-              </tr>
-            </thead>
-            <tbody>
-              {combo.items?.map((item, i) => (
-                <tr key={i} style={styles.tr}>
-                  <td style={styles.tdCover}>
-                    <img src={item.cover} alt={item.title} style={styles.cover} />
-                  </td>
-                  <td style={styles.td}>{item.title}</td>
-                  <td style={styles.tdCenter}>
-                    <span style={styles.conditionBadge}>{item.condition}</span>
-                  </td>
-                  <td style={styles.td}>{item.sellerName}</td>
-                  <td style={styles.tdRight}>
-                    <span style={styles.price}>{item.price?.toLocaleString()}원</span>
-                  </td>
-                  <td style={styles.tdRight}>
-                    {item.shipping === 0
-                      ? <span style={styles.freeShip}>무료</span>
-                      : `${item.shipping?.toLocaleString()}원`}
-                  </td>
-                  <td style={styles.tdRight}>
-                    <span style={styles.discountBadge}>{item.discount}%</span>
-                  </td>
-                  <td style={styles.tdCenter}>
-                    <a href={item.productLink} target="_blank" rel="noreferrer" style={styles.link}>
-                      구매
-                    </a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* 배송비 합계 푸터 */}
-          <div style={styles.comboFooter}>
-            <span>책 가격 합계 {combo.itemPrice?.toLocaleString()}원</span>
-            <span>+ 배송비 {combo.totalShipping?.toLocaleString()}원</span>
-            <span style={styles.totalFinal}>= 총 {combo.totalCost?.toLocaleString()}원</span>
-          </div>
+      {crawling && (
+        <div style={styles.crawlingBanner}>
+          <span style={styles.spinner}>⏳</span> 판매처 데이터 수집 중...
         </div>
-      ))}
+      )}
+
+      {books.map(book => {
+        const newOption = book.options.find(o => o.sellerType === 'new');
+        const usedOptions = book.options.filter(o => o.sellerType !== 'new');
+        const isExpanded = expanded[book.isbn13] ?? true;
+
+        return (
+          <div key={book.isbn13} style={styles.bookSection}>
+            {/* 새책 헤더 (항상 표시) */}
+            <div style={styles.bookHeader}>
+              <img src={book.cover} alt={book.title} style={styles.cover} />
+              <div style={styles.bookInfo}>
+                <a
+                  href={`https://www.aladin.co.kr/shop/wproduct.aspx?ISBN=${book.isbn13}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={styles.bookTitle}
+                >
+                  {book.title}
+                </a>
+                <div style={styles.bookMeta}>{book.author} | {book.publisher}</div>
+                {newOption && (
+                  <div style={styles.newRow}>
+                    <span style={styles.newBadge}>새책</span>
+                    <span style={styles.newPrice}>{newOption.price?.toLocaleString()}원</span>
+                    <span style={styles.newShip}>무료배송</span>
+                    <span style={styles.newDiscount}>{newOption.discount}% 할인</span>
+                    <a href={newOption.productLink} target="_blank" rel="noreferrer" style={styles.buyBtn}>구매</a>
+                  </div>
+                )}
+              </div>
+              <button style={styles.toggleBtn} onClick={() => toggleExpand(book.isbn13)}>
+                {isExpanded ? '중고 접기 ▲' : `중고 ${usedOptions.length}개 보기 ▼`}
+              </button>
+            </div>
+
+            {/* 중고 옵션 목록 */}
+            {isExpanded && usedOptions.length > 0 && (
+              <table style={styles.table}>
+                <thead>
+                  <tr style={styles.thead}>
+                    <th style={styles.th}>판매처 유형</th>
+                    <th style={styles.th}>판매자</th>
+                    <th style={styles.th}>등급</th>
+                    <th style={styles.th}>판매가</th>
+                    <th style={styles.th}>배송비</th>
+                    <th style={styles.th}>할인율</th>
+                    <th style={styles.th}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usedOptions.map((opt, i) => (
+                    <tr key={i} style={styles.tr}>
+                      <td style={styles.td}>
+                        <span style={{ ...styles.typeBadge, color: SELLER_TYPE_COLOR[opt.sellerType] || '#555', borderColor: SELLER_TYPE_COLOR[opt.sellerType] || '#555' }}>
+                          {SELLER_TYPE_LABEL[opt.sellerType] || opt.sellerType}
+                        </span>
+                      </td>
+                      <td style={styles.td}>
+                        {opt.sellerLink
+                          ? <a href={opt.sellerLink} target="_blank" rel="noreferrer" style={styles.sellerLink}>{opt.sellerName}</a>
+                          : opt.sellerName}
+                      </td>
+                      <td style={styles.tdCenter}>
+                        <span style={styles.conditionBadge}>{opt.condition}</span>
+                      </td>
+                      <td style={styles.tdRight}>
+                        <span style={styles.price}>{opt.price?.toLocaleString()}원</span>
+                      </td>
+                      <td style={styles.tdRight}>
+                        {opt.shipping === 0
+                          ? <span style={styles.freeShip}>무료</span>
+                          : `${opt.shipping?.toLocaleString()}원`}
+                      </td>
+                      <td style={styles.tdRight}>
+                        <span style={styles.discountBadge}>{opt.discount}%</span>
+                      </td>
+                      <td style={styles.tdCenter}>
+                        {opt.productLink && (
+                          <a href={opt.productLink} target="_blank" rel="noreferrer" style={styles.buyBtn}>구매</a>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            {isExpanded && usedOptions.length === 0 && !crawling && (
+              <div style={styles.noUsed}>중고 판매처 없음</div>
+            )}
+
+            {isExpanded && usedOptions.length === 0 && crawling && (
+              <div style={styles.noUsed}>수집 중...</div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 const styles = {
   empty: { textAlign: 'center', paddingTop: '60px', color: '#444' },
-  comboBox: {
-    background: '#fff',
-    border: '1px solid #ddd',
-    marginBottom: '20px',
-  },
-  comboHeader: {
-    background: '#f0f5ff',
-    borderBottom: '2px solid #0066cc',
-    padding: '14px 20px',
+  crawlingBanner: {
+    background: '#fff8e1',
+    border: '1px solid #ffe082',
+    padding: '10px 16px',
+    marginBottom: '16px',
+    fontSize: '14px',
+    color: '#7a5c00',
     display: 'flex',
     alignItems: 'center',
-    gap: '20px',
+    gap: '8px',
   },
-  comboRank: {
-    fontSize: '18px',
+  spinner: { fontSize: '16px' },
+  bookSection: {
+    background: '#fff',
+    border: '1px solid #ddd',
+    marginBottom: '16px',
+  },
+  bookHeader: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '16px',
+    padding: '16px',
+    borderBottom: '1px solid #eee',
+    background: '#f8f9ff',
+  },
+  cover: { width: '56px', flexShrink: 0 },
+  bookInfo: { flex: 1 },
+  bookTitle: {
+    display: 'block',
     fontWeight: 'bold',
-    color: '#0066cc',
-    minWidth: '32px',
+    fontSize: '15px',
+    color: '#222',
+    textDecoration: 'none',
+    marginBottom: '4px',
   },
-  comboStat: { display: 'flex', alignItems: 'baseline', gap: '12px', flex: 1 },
-  totalPrice: { fontSize: '24px', fontWeight: 'bold', color: '#e6003e' },
-  discount: {
-    fontSize: '16px',
+  bookMeta: { fontSize: '12px', color: '#888', marginBottom: '8px' },
+  newRow: { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' },
+  newBadge: {
+    background: '#0066cc',
+    color: '#fff',
+    padding: '2px 7px',
+    fontSize: '12px',
     fontWeight: 'bold',
-    color: '#0066cc',
-    background: '#e8f0ff',
-    padding: '2px 8px',
   },
-  comboMeta: { fontSize: '13px', color: '#666' },
+  newPrice: { fontWeight: 'bold', color: '#e6003e', fontSize: '15px' },
+  newShip: { fontSize: '12px', color: '#0066cc' },
+  newDiscount: { fontSize: '12px', color: '#888' },
+  toggleBtn: {
+    background: 'none',
+    color: '#0066cc',
+    fontSize: '13px',
+    whiteSpace: 'nowrap',
+    alignSelf: 'center',
+    textDecoration: 'underline',
+    flexShrink: 0,
+  },
   table: { width: '100%', borderCollapse: 'collapse' },
   thead: { background: '#fafafa' },
   th: {
-    padding: '9px 12px',
+    padding: '8px 12px',
     textAlign: 'left',
     borderBottom: '1px solid #eee',
     fontWeight: 'bold',
@@ -126,11 +220,16 @@ const styles = {
     fontSize: '13px',
   },
   tr: { borderBottom: '1px solid #f0f0f0' },
-  tdCover: { padding: '10px 12px', width: '70px' },
-  cover: { width: '50px', display: 'block' },
-  td: { padding: '10px 12px', fontSize: '14px', color: '#222' },
-  tdCenter: { padding: '10px 12px', textAlign: 'center' },
-  tdRight: { padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap' },
+  td: { padding: '9px 12px', fontSize: '14px', color: '#222' },
+  tdCenter: { padding: '9px 12px', textAlign: 'center' },
+  tdRight: { padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' },
+  typeBadge: {
+    border: '1px solid',
+    padding: '2px 6px',
+    fontSize: '12px',
+    fontWeight: 'bold',
+  },
+  sellerLink: { color: '#0066cc', textDecoration: 'none' },
   conditionBadge: {
     background: '#f0f5ff',
     color: '#0066cc',
@@ -141,21 +240,13 @@ const styles = {
   price: { color: '#e6003e', fontWeight: 'bold' },
   freeShip: { color: '#0066cc', fontWeight: 'bold' },
   discountBadge: { color: '#e6003e', fontWeight: 'bold' },
-  link: {
+  buyBtn: {
     background: '#0066cc',
     color: '#fff',
     padding: '4px 10px',
     fontSize: '12px',
     display: 'inline-block',
+    textDecoration: 'none',
   },
-  comboFooter: {
-    padding: '12px 20px',
-    borderTop: '1px solid #eee',
-    display: 'flex',
-    gap: '16px',
-    fontSize: '14px',
-    color: '#555',
-    justifyContent: 'flex-end',
-  },
-  totalFinal: { fontWeight: 'bold', color: '#e6003e' },
+  noUsed: { padding: '12px 16px', color: '#aaa', fontSize: '13px' },
 };

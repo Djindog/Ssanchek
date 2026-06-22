@@ -16,21 +16,62 @@ export default function WishlistTab({ wishlist, onRemove, onToggleMust, onAnalyz
   }
 
   async function handleAnalyze() {
-    if (!budget.min || !budget.max) {
-      alert('예산 범위를 입력해주세요.');
-      return;
-    }
     if (wishlist.length === 0) {
       alert('위시리스트에 책을 추가해주세요.');
       return;
     }
     setLoading(true);
-    // TODO: 크롤링 API 호출 + 알고리즘 실행
-    // 임시로 빈 결과
-    setTimeout(() => {
-      onAnalyze([]);
-      setLoading(false);
-    }, 1000);
+    onAnalyze({ books: wishlist.map(b => ({ ...b, options: [] })), crawling: true });
+
+    // 각 책마다 lookup → crawl 순서로 처리
+    const bookData = wishlist.map(b => ({ ...b, options: [] }));
+
+    for (let i = 0; i < wishlist.length; i++) {
+      const book = wishlist[i];
+      try {
+        // 1. lookup으로 usedList URL 가져오기
+        const lookupRes = await fetch(`/api/lookup?isbn13=${book.isbn13}`);
+        const lookupData = await lookupRes.json();
+        const usedList = lookupData.usedList;
+
+        // 새책 옵션 추가
+        bookData[i].options.push({
+          sellerType: 'new',
+          sellerName: '알라딘 새책',
+          price: lookupData.priceSales,
+          priceStandard: lookupData.priceStandard,
+          shipping: 0,
+          discount: Math.round((1 - lookupData.priceSales / lookupData.priceStandard) * 100),
+          condition: '새책',
+          productLink: lookupData.link,
+        });
+
+        onAnalyze({ books: [...bookData], crawling: true });
+
+        // 2. 크롤링할 URL 목록 구성
+        const urlList = [];
+        if (usedList?.aladinUsed?.link) urlList.push({ url: usedList.aladinUsed.link, type: 'aladinUsed', isbn: book.isbn13 });
+        if (usedList?.userUsed?.link)   urlList.push({ url: usedList.userUsed.link,   type: 'userUsed',   isbn: book.isbn13 });
+        if (usedList?.spaceUsed?.link)  urlList.push({ url: usedList.spaceUsed.link,  type: 'spaceUsed',  isbn: book.isbn13 });
+
+        if (urlList.length > 0) {
+          const crawlRes = await fetch('/api/crawl', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ books: [{ isbn: book.isbn13, ...Object.fromEntries(urlList.map(u => [u.type + 'Link', u.url])) }] }),
+          });
+          const crawlData = await crawlRes.json();
+          const crawled = crawlData.data?.[0]?.options ?? [];
+          bookData[i].options.push(...crawled);
+        }
+
+        onAnalyze({ books: [...bookData], crawling: i < wishlist.length - 1 });
+      } catch (e) {
+        console.error('크롤링 오류', book.isbn13, e);
+      }
+    }
+
+    setLoading(false);
   }
 
   if (wishlist.length === 0) {
@@ -107,10 +148,14 @@ export default function WishlistTab({ wishlist, onRemove, onToggleMust, onAnalyz
           {wishlist.map(book => (
             <tr key={book.isbn13} style={styles.tr}>
               <td style={styles.tdCover}>
-                <img src={book.cover} alt={book.title} style={styles.cover} />
+                <a href={`https://www.aladin.co.kr/shop/wproduct.aspx?ISBN=${book.isbn13}`} target="_blank" rel="noreferrer">
+                  <img src={book.cover} alt={book.title} style={styles.cover} />
+                </a>
               </td>
               <td style={styles.tdInfo}>
-                <div style={styles.title}>{book.title}</div>
+                <a href={`https://www.aladin.co.kr/shop/wproduct.aspx?ISBN=${book.isbn13}`} target="_blank" rel="noreferrer" style={styles.titleLink}>
+                  {book.title}
+                </a>
                 <div style={styles.meta}>{book.author} | {book.publisher}</div>
               </td>
               <td style={styles.tdPrice}>
@@ -180,6 +225,7 @@ const styles = {
   cover: { width: '60px', display: 'block' },
   tdInfo: { padding: '12px', verticalAlign: 'top' },
   title: { fontWeight: 'bold', marginBottom: '4px', color: '#222' },
+  titleLink: { fontWeight: 'bold', marginBottom: '4px', color: '#222', textDecoration: 'none' },
   meta: { fontSize: '12px', color: '#888' },
   tdPrice: { padding: '12px', textAlign: 'right', whiteSpace: 'nowrap' },
   salePrice: { color: '#e6003e', fontWeight: 'bold' },

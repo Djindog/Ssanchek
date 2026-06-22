@@ -14,7 +14,7 @@ const TABS = [
 export default function MainPage() {
   const [activeTab, setActiveTab] = useState('search');
   const [wishlist, setWishlist] = useState([]);
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
 
@@ -26,13 +26,13 @@ export default function MainPage() {
 
   async function addToWishlist(book) {
     if (wishlist.find(b => b.isbn13 === book.isbn13)) return;
-    const saved = await addToWishlistDB(book);
-    if (saved?.isbn13) setWishlist(prev => [...prev, saved]);
+    setWishlist(prev => [...prev, { ...book, mustInclude: false }]);
+    addToWishlistDB(book);
   }
 
   async function removeFromWishlist(isbn13) {
-    await removeFromWishlistDB(isbn13);
     setWishlist(prev => prev.filter(b => b.isbn13 !== isbn13));
+    removeFromWishlistDB(isbn13);
   }
 
   function toggleMustInclude(isbn13, next) {
@@ -90,7 +90,7 @@ export default function MainPage() {
             wishlist={wishlist}
             onRemove={removeFromWishlist}
             onToggleMust={toggleMustInclude}
-            onAnalyze={(res) => { setResults(res); setActiveTab('result'); }}
+            onAnalyze={(res) => { setResults(res); if (activeTab !== 'result') setActiveTab('result'); }}
           />
         )}
         {activeTab === 'result' && (
