@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// 유저 (Supabase Auth와 연동)
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  createdAt DateTime   @default(now())
+  wishlists Wishlist[]
+}
+
+// 위시리스트 (유저당 여러 개 가능)
+model Wishlist {
+  id        String         @id @default(uuid())
+  userId    String
+  name      String         @default("내 위시리스트")
+  createdAt DateTime       @default(now())
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     WishlistItem[]
+}
+
+// 위시리스트에 담긴 책
+model WishlistItem {
+  id            String   @id @default(uuid())
+  wishlistId    String
+  isbn13        String
+  title         String
+  author        String
+  publisher     String
+  cover         String
+  priceStandard Int
+  priceSales    Int
+  mustInclude   Boolean  @default(false)
+  addedAt       DateTime @default(now())
+  wishlist      Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+
+  @@unique([wishlistId, isbn13])
+}
+
+// 크롤링 결과 캐시
+model CrawlCache {
+  id          String   @id @default(uuid())
+  isbn13      String
+  sellerType  String
+  sellerId    String
+  sellerName  String
+  sellerLink  String
+  productLink String
+  price       Int
+  shipping    Int
+  discount    Int
+  condition   String
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([isbn13])
+  @@index([expiresAt])
+}
