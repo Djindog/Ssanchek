@@ -1,16 +1,18 @@
 import { useState } from 'react';
+import { updateMustInclude } from '../lib/api';
 
 const CONDITION_LABELS = { 최상: '최상', 상: '상', 중: '중', 하: '하' };
 
-export default function WishlistTab({ wishlist, onRemove, onAnalyze }) {
+export default function WishlistTab({ wishlist, onRemove, onToggleMust, onAnalyze }) {
   const [budget, setBudget] = useState({ min: '', max: '' });
   const [globalCondition, setGlobalCondition] = useState('중');
   const [globalDays, setGlobalDays] = useState('7');
-  const [mustInclude, setMustInclude] = useState({});
   const [loading, setLoading] = useState(false);
 
-  function toggleMust(isbn13) {
-    setMustInclude(prev => ({ ...prev, [isbn13]: !prev[isbn13] }));
+  async function toggleMust(isbn13, current) {
+    const next = !current;
+    onToggleMust(isbn13, next);
+    await updateMustInclude(isbn13, next);
   }
 
   async function handleAnalyze() {
@@ -118,8 +120,8 @@ export default function WishlistTab({ wishlist, onRemove, onAnalyze }) {
               <td style={styles.tdCenter}>
                 <input
                   type="checkbox"
-                  checked={!!mustInclude[book.isbn13]}
-                  onChange={() => toggleMust(book.isbn13)}
+                  checked={!!book.mustInclude}
+                  onChange={() => toggleMust(book.isbn13, book.mustInclude)}
                 />
               </td>
               <td style={styles.tdCenter}>

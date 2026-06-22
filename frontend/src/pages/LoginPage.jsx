@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
@@ -13,6 +13,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
+    const email = `${username.trim()}@ssanchek.com`;
     const { error } = isSignUp
       ? await supabase.auth.signUp({ email, password })
       : await supabase.auth.signInWithPassword({ email, password });
@@ -30,10 +31,10 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} style={styles.form}>
           <input
             style={styles.input}
-            type="email"
-            placeholder="이메일"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
+            type="text"
+            placeholder="아이디"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
             required
           />
           <input

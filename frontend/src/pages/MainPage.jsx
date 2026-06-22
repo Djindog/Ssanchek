@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { fetchWishlist, addToWishlistDB, removeFromWishlistDB } from '../lib/api';
 import SearchTab from '../components/SearchTab';
 import WishlistTab from '../components/WishlistTab';
 import ResultTab from '../components/ResultTab';
@@ -15,13 +16,25 @@ export default function MainPage() {
   const [wishlist, setWishlist] = useState([]);
   const [results, setResults] = useState([]);
 
-  function addToWishlist(book) {
+  useEffect(() => {
+    fetchWishlist().then(items => {
+      if (Array.isArray(items)) setWishlist(items);
+    });
+  }, []);
+
+  async function addToWishlist(book) {
     if (wishlist.find(b => b.isbn13 === book.isbn13)) return;
-    setWishlist(prev => [...prev, book]);
+    const saved = await addToWishlistDB(book);
+    if (saved?.isbn13) setWishlist(prev => [...prev, saved]);
   }
 
-  function removeFromWishlist(isbn13) {
+  async function removeFromWishlist(isbn13) {
+    await removeFromWishlistDB(isbn13);
     setWishlist(prev => prev.filter(b => b.isbn13 !== isbn13));
+  }
+
+  function toggleMustInclude(isbn13, next) {
+    setWishlist(prev => prev.map(b => b.isbn13 === isbn13 ? { ...b, mustInclude: next } : b));
   }
 
   async function handleLogout() {
@@ -67,6 +80,7 @@ export default function MainPage() {
           <WishlistTab
             wishlist={wishlist}
             onRemove={removeFromWishlist}
+            onToggleMust={toggleMustInclude}
             onAnalyze={(res) => { setResults(res); setActiveTab('result'); }}
           />
         )}
@@ -84,7 +98,7 @@ const styles = {
   headerInner: {
     maxWidth: '1100px',
     margin: '0 auto',
-    padding: '12px 20px',
+    padding: '12px 24px',
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
@@ -101,9 +115,7 @@ const styles = {
     background: '#fff',
     borderBottom: '2px solid #0066cc',
     display: 'flex',
-    maxWidth: '1100px',
-    margin: '0 auto',
-    width: '100%',
+    padding: '0 24px',
   },
   tab: {
     padding: '12px 24px',
@@ -132,7 +144,6 @@ const styles = {
   main: {
     maxWidth: '1100px',
     margin: '0 auto',
-    padding: '20px',
-    width: '100%',
+    padding: '24px 60px',
   },
 };
