@@ -15,6 +15,8 @@ export default function MainPage() {
   const [activeTab, setActiveTab] = useState('search');
   const [wishlist, setWishlist] = useState([]);
   const [results, setResults] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
 
   useEffect(() => {
     fetchWishlist().then(items => {
@@ -74,7 +76,14 @@ export default function MainPage() {
       {/* 탭 컨텐츠 */}
       <main style={styles.main}>
         {activeTab === 'search' && (
-          <SearchTab wishlist={wishlist} onAdd={addToWishlist} />
+          <SearchTab
+            wishlist={wishlist}
+            onAdd={addToWishlist}
+            query={searchQuery}
+            onQueryChange={setSearchQuery}
+            results={searchResults}
+            onResultsChange={setSearchResults}
+          />
         )}
         {activeTab === 'wishlist' && (
           <WishlistTab

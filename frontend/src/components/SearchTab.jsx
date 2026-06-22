@@ -1,8 +1,6 @@
 import { useState } from 'react';
 
-export default function SearchTab({ wishlist, onAdd }) {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
+export default function SearchTab({ wishlist, onAdd, query, onQueryChange, results, onResultsChange }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -15,7 +13,7 @@ export default function SearchTab({ wishlist, onAdd }) {
     try {
       const res = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
       const data = await res.json();
-      setResults(data.item || []);
+      onResultsChange(data.item || []);
     } catch {
       setError('검색 중 오류가 발생했습니다.');
     }
@@ -31,7 +29,7 @@ export default function SearchTab({ wishlist, onAdd }) {
           type="text"
           placeholder="책 제목 또는 ISBN으로 검색"
           value={query}
-          onChange={e => setQuery(e.target.value)}
+          onChange={e => onQueryChange(e.target.value)}
         />
         <button style={styles.searchBtn} type="submit" disabled={loading}>
           {loading ? '검색중...' : '검색'}
