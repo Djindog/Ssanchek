@@ -219,7 +219,12 @@ export default function WishlistTab({ wishlist, onRemove, onToggleMust, onAnalyz
                 },
                 topK: 10,
               };
-              onOptimize(currentResults.books, constraints);
+              const mustMap = Object.fromEntries(wishlist.map(b => [b.isbn13, b.mustInclude]));
+              const booksWithMust = currentResults.books.map(b => ({
+                ...b,
+                mustInclude: mustMap[b.isbn13] ?? b.mustInclude ?? false,
+              }));
+              onOptimize(booksWithMust, constraints);
             }}
           >
             조합 분석 →
