@@ -11,7 +11,8 @@ model User {
   id        String     @id @default(uuid())
   email     String     @unique
   createdAt DateTime   @default(now())
-  wishlists Wishlist[]
+  wishlists       Wishlist[]
+  crawlResult     UserCrawlResult?
 }
 
 // 위시리스트 (유저당 여러 개 가능)
@@ -40,6 +41,15 @@ model WishlistItem {
   wishlist      Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
 
   @@unique([wishlistId, isbn13])
+}
+
+// 유저별 마지막 크롤링 결과
+model UserCrawlResult {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  data      Json
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // 크롤링 결과 캐시

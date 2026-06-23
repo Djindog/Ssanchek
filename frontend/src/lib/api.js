@@ -35,3 +35,18 @@ export async function updateMustInclude(isbn13, mustInclude) {
     body: JSON.stringify({ isbn13, mustInclude }),
   });
 }
+
+export async function fetchCrawlResult() {
+  const headers = await authHeaders();
+  const res = await fetch('/api/crawl-result', { headers });
+  return res.json();
+}
+
+export async function saveCrawlResult(data) {
+  const headers = await authHeaders();
+  await fetch('/api/crawl-result', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ data }),
+  });
+}

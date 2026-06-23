@@ -23,10 +23,46 @@ const CONDITION_COLOR = {
   하: '#bbb',
 };
 
+const SORT_OPTIONS = [
+  { value: 'default', label: '기본순' },
+  { value: 'price_asc', label: '저가격순' },
+  { value: 'price_desc', label: '고가격순' },
+  { value: 'discount_desc', label: '할인율 높은순' },
+  { value: 'condition_asc', label: '상태 좋은순' },
+  { value: 'shipping_asc', label: '배송비 낮은순' },
+];
+
+const CONDITIONS = ['최상', '상', '중', '하'];
+
+const CONDITION_RANK = { 최상: 0, 상: 1, 중: 2, 하: 3 };
+
+function applySort(options, sortKey) {
+  if (sortKey === 'default') return options;
+  const arr = [...options];
+  if (sortKey === 'price_asc')      arr.sort((a, b) => (a.price ?? 9e9) - (b.price ?? 9e9));
+  if (sortKey === 'price_desc')     arr.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+  if (sortKey === 'discount_desc')  arr.sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0));
+  if (sortKey === 'condition_asc')  arr.sort((a, b) => (CONDITION_RANK[a.condition] ?? 99) - (CONDITION_RANK[b.condition] ?? 99));
+  if (sortKey === 'shipping_asc')   arr.sort((a, b) => (a.shipping ?? 9e9) - (b.shipping ?? 9e9));
+  return arr;
+}
+
 export default function ResultTab({ results }) {
   const [expanded, setExpanded] = useState({});
   const [hoveredRow, setHoveredRow] = useState(null);
   const [hoveredTitle, setHoveredTitle] = useState(null);
+  const [sortKey, setSortKey] = useState('default');
+  const [condFilter, setCondFilter] = useState(new Set(CONDITIONS)); // all checked
+  const [condOpen, setCondOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+
+  function toggleCond(c) {
+    setCondFilter(prev => {
+      const next = new Set(prev);
+      next.has(c) ? next.delete(c) : next.add(c);
+      return next;
+    });
+  }
 
   if (!results) {
     return (
@@ -49,8 +85,63 @@ export default function ResultTab({ results }) {
     setExpanded(prev => ({ ...prev, [isbn13]: !prev[isbn13] }));
   }
 
+  const sortLabel = SORT_OPTIONS.find(o => o.value === sortKey)?.label ?? '기본순';
+  const condAllChecked = condFilter.size === CONDITIONS.length;
+  const condLabel = condAllChecked ? '모든 등급' : CONDITIONS.filter(c => condFilter.has(c)).join(', ') || '없음';
+
   return (
-    <div style={{ fontFamily: FONT }}>
+    <div style={{ fontFamily: FONT }} onClick={() => { setSortOpen(false); setCondOpen(false); }}>
+      {/* 컨트롤 바 */}
+      <div style={styles.controlBar} onClick={e => e.stopPropagation()}>
+        <span style={styles.controlLabel}>정렬</span>
+
+        {/* 정렬 드롭다운 */}
+        <div style={styles.dropWrap}>
+          <button style={styles.dropBtn} onClick={() => { setSortOpen(p => !p); setCondOpen(false); }}>
+            {sortLabel} <span style={styles.chevron}>▾</span>
+          </button>
+          {sortOpen && (
+            <div style={styles.dropMenu}>
+              {SORT_OPTIONS.map(o => (
+                <div
+                  key={o.value}
+                  style={{ ...styles.dropItem, fontWeight: sortKey === o.value ? 'bold' : 'normal', color: sortKey === o.value ? '#0066cc' : '#222' }}
+                  onClick={() => { setSortKey(o.value); setSortOpen(false); }}
+                >
+                  {o.label}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <span style={{ ...styles.controlLabel, marginLeft: '16px' }}>상태별 보기</span>
+
+        {/* 등급 필터 드롭다운 */}
+        <div style={styles.dropWrap}>
+          <button style={styles.dropBtn} onClick={() => { setCondOpen(p => !p); setSortOpen(false); }}>
+            {condLabel} <span style={styles.chevron}>▾</span>
+          </button>
+          {condOpen && (
+            <div style={styles.dropMenu}>
+              <div
+                style={{ ...styles.dropItem, borderBottom: '1px solid #eee' }}
+                onClick={() => setCondFilter(condAllChecked ? new Set() : new Set(CONDITIONS))}
+              >
+                <input type="checkbox" checked={condAllChecked} readOnly style={styles.check} />
+                <span>전체</span>
+              </div>
+              {CONDITIONS.map(c => (
+                <div key={c} style={styles.dropItem} onClick={() => toggleCond(c)}>
+                  <input type="checkbox" checked={condFilter.has(c)} readOnly style={styles.check} />
+                  <span style={{ color: CONDITION_COLOR[c], fontWeight: 'bold' }}>{c}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* 슬림 progress bar */}
       {crawling && (
         <div style={styles.progressBar}>
@@ -60,7 +151,10 @@ export default function ResultTab({ results }) {
 
       {books.map(book => {
         const newOption = book.options.find(o => o.sellerType === 'new');
-        const usedOptions = book.options.filter(o => o.sellerType !== 'new');
+        const usedOptions = applySort(
+          book.options.filter(o => o.sellerType !== 'new' && condFilter.has(o.condition)),
+          sortKey
+        );
         const isExpanded = expanded[book.isbn13] ?? true;
 
         return (
@@ -114,7 +208,6 @@ export default function ResultTab({ results }) {
                     <th style={styles.th}>등급</th>
                     <th style={styles.th}>판매가</th>
                     <th style={styles.th}>배송비</th>
-                    <th style={styles.th}>할인율</th>
                     <th style={styles.th}></th>
                   </tr>
                 </thead>
@@ -123,6 +216,7 @@ export default function ResultTab({ results }) {
                     const rowKey = `${book.isbn13}-${i}`;
                     const color = SELLER_TYPE_COLOR[opt.sellerType] || '#555';
                     const condColor = CONDITION_COLOR[opt.condition] || '#888';
+                    const isSpace = opt.sellerType === 'spaceUsed';
                     return (
                       <tr
                         key={i}
@@ -133,37 +227,40 @@ export default function ResultTab({ results }) {
                         onMouseEnter={() => setHoveredRow(rowKey)}
                         onMouseLeave={() => setHoveredRow(null)}
                       >
-                        <td style={styles.td}>
-                          <span style={{
-                            ...styles.typePill,
-                            color,
-                            borderColor: color,
-                          }}>
+                        <td style={styles.tdCell}>
+                          <span style={{ ...styles.typePill, color, borderColor: color }}>
                             {SELLER_TYPE_LABEL[opt.sellerType] || opt.sellerType}
                           </span>
                         </td>
-                        <td style={styles.td}>
-                          {opt.sellerLink
-                            ? <a href={opt.sellerLink} target="_blank" rel="noreferrer" style={styles.sellerLink}>{opt.sellerName}</a>
-                            : opt.sellerName}
+                        <td style={styles.tdSeller}>
+                          <div style={styles.sellerInner}>
+                            {opt.sellerLink
+                              ? <a href={opt.sellerLink} target="_blank" rel="noreferrer" style={styles.sellerLink}>{opt.sellerName || '—'}</a>
+                              : <span>{opt.sellerName || '—'}</span>}
+                          </div>
                         </td>
-                        <td style={styles.tdCenter}>
+                        <td style={styles.tdCell}>
                           <span style={{ fontWeight: 'bold', color: condColor, fontSize: '13px' }}>
                             {opt.condition}
                           </span>
                         </td>
-                        <td style={styles.tdRight}>
+                        <td style={styles.tdCell}>
                           <span style={styles.price}>{opt.price?.toLocaleString()}원</span>
+                          {opt.discount > 0 && (
+                            <span style={styles.discountSub}> ({opt.discount}% 할인)</span>
+                          )}
                         </td>
-                        <td style={styles.tdRight}>
-                          {opt.shipping === 0
-                            ? <span style={styles.freeShip}>무료</span>
-                            : <span style={{ color: '#555' }}>{opt.shipping?.toLocaleString()}원</span>}
+                        <td style={styles.tdCell}>
+                          {opt.shipping === 0 ? (
+                            <span style={styles.freeShip}>무료</span>
+                          ) : (
+                            <span style={{ color: '#555', fontSize: '13px' }}>{opt.shipping?.toLocaleString()}원</span>
+                          )}
+                          {isSpace && (
+                            <span style={styles.spaceShip}> (2만원↑무료)</span>
+                          )}
                         </td>
-                        <td style={styles.tdRight}>
-                          <span style={styles.discount}>{opt.discount}%</span>
-                        </td>
-                        <td style={styles.tdCenter}>
+                        <td style={styles.tdCell}>
                           {opt.productLink && (
                             <a href={opt.productLink} target="_blank" rel="noreferrer" style={styles.buyBtn}>구매</a>
                           )}
@@ -256,7 +353,7 @@ const styles = {
   },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: {
-    padding: '8px 12px',
+    padding: '8px 4px',
     textAlign: 'center',
     borderBottom: '2px solid #eee',
     fontWeight: 'bold',
@@ -264,32 +361,96 @@ const styles = {
     fontSize: '13px',
     background: '#fff',
   },
+  controlBar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '16px',
+    flexWrap: 'wrap',
+  },
+  controlLabel: { fontSize: '13px', color: '#555', fontWeight: 'bold' },
+  dropWrap: { position: 'relative' },
+  dropBtn: {
+    border: '1px solid #ccc',
+    background: '#fff',
+    padding: '5px 12px',
+    fontSize: '13px',
+    color: '#222',
+    cursor: 'pointer',
+    borderRadius: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
+  chevron: { fontSize: '11px', color: '#888' },
+  dropMenu: {
+    position: 'absolute',
+    top: 'calc(100% + 4px)',
+    left: 0,
+    background: '#fff',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+    zIndex: 100,
+    minWidth: '140px',
+  },
+  dropItem: {
+    padding: '8px 14px',
+    fontSize: '13px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  check: { cursor: 'pointer', accentColor: '#0066cc' },
   tr: { borderBottom: '1px solid #f0f0f0', transition: 'background 0.1s' },
-  td: { padding: '10px 12px', fontSize: '14px', color: '#222', textAlign: 'center' },
-  tdCenter: { padding: '10px 12px', textAlign: 'center' },
-  tdRight: { padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' },
+  // 공통 셀: padding 줄여서 overflow 방지
+  tdCell: {
+    padding: '8px 4px',
+    fontSize: '13px',
+    color: '#222',
+    textAlign: 'center',
+    whiteSpace: 'nowrap',
+  },
+  // 판매자 셀: 고정 최대 너비 + ellipsis
+  tdSeller: {
+    padding: '8px 4px',
+    maxWidth: '220px',
+    width: '220px',
+  },
+  sellerInner: {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    fontSize: '13px',
+    color: '#222',
+    textAlign: 'center',
+  },
   typePill: {
     border: '1px solid',
-    padding: '2px 10px',
+    padding: '2px 8px',
     fontSize: '12px',
     fontWeight: 'bold',
     borderRadius: '20px',
     background: 'transparent',
     whiteSpace: 'nowrap',
+    display: 'inline-block',
   },
   sellerLink: { color: '#333', textDecoration: 'none' },
-  price: { color: '#e6003e', fontWeight: 'bold', fontSize: '15px' },
-  freeShip: { color: '#0066cc', fontWeight: 'bold' },
-  discount: { color: '#e6003e', fontWeight: 'bold' },
+  price: { color: '#e6003e', fontWeight: 'bold', fontSize: '14px' },
+  discountSub: { fontSize: '12px', color: '#e6003e', opacity: 0.75 },
+  freeShip: { color: '#0066cc', fontWeight: 'bold', fontSize: '13px' },
+  spaceShip: { color: '#7b3fa0', fontSize: '12px', fontWeight: 'bold' },
   buyBtn: {
     background: '#0066cc',
     color: '#fff',
-    padding: '5px 12px',
+    padding: '4px 10px',
     fontSize: '12px',
     display: 'inline-block',
     textDecoration: 'none',
     borderRadius: '3px',
     fontWeight: 'bold',
+    whiteSpace: 'nowrap',
   },
   noUsed: { padding: '12px 16px', color: '#aaa', fontSize: '13px' },
 };

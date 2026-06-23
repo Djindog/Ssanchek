@@ -1,6 +1,9 @@
 import * as cheerio from 'cheerio';
+import { prisma } from './db.js';
 
 export const config = { maxDuration: 60 };
+
+const CACHE_TTL_HOURS = 24;
 
 async function fetchPage(url) {
   const res = await fetch(url, {
@@ -18,7 +21,7 @@ function parseUsedList(html, sellerType) {
   const results = [];
 
   $('tr').each((_, row) => {
-    const conditionText = $(row).find('.Ere_sub_top').first().text().trim();
+    const conditionText = $(row).find('.Ere_sub_top, .Ere_sub_middle, .Ere_sub_low').first().text().trim();
     if (!conditionText) return;
 
     const priceText = $(row).find('.Ere_fs20.Ere_sub_pink').text().replace(/,/g, '').trim();
@@ -41,23 +44,25 @@ function parseUsedList(html, sellerType) {
     let detectedType = sellerType;
 
     const spaceEl = $(row).find('.Ere_used_store');
+    const aladinEl = $(row).find('.Ere_used_aladin');
     const storeNameEl = $(row).find('.Ere_store_name a');
 
     if (spaceEl.length) {
       // 광활한우주점
       detectedType = 'spaceUsed';
-      sellerName = storeNameEl.text().replace(/\s+/g, ' ').trim(); // 지점명
+      sellerName = storeNameEl.text().replace(/\s+/g, ' ').trim();
       sellerHref = storeNameEl.attr('href') || '';
+    } else if (aladinEl.length) {
+      // 알라딘 직접 배송
+      detectedType = 'aladinUsed';
+      sellerName = '';
+      sellerHref = '';
     } else {
-      const sellerEl = $(row).find('.seller a').last();
+      // 일반 판매자 - 첫 번째 a가 판매자명 링크
+      detectedType = 'userUsed';
+      const sellerEl = $(row).find('.seller a').first();
       sellerName = sellerEl.text().trim();
       sellerHref = sellerEl.attr('href') || '';
-
-      // 알라딘 직배송 여부 (SC 없으면 알라딘 자체)
-      if (!sellerHref.includes('SC=') && sellerType === 'aladinUsed') {
-        detectedType = 'aladinUsed';
-        sellerName = '';
-      }
     }
 
     const sellerLink = sellerHref.startsWith('http')
@@ -114,31 +119,78 @@ export default async function handler(req, res) {
   }
 
   const { books } = req.body;
-  // books: [{ isbn, aladinUsedLink, userUsedLink, spaceUsedLink }]
-
   if (!books || !Array.isArray(books)) {
     return res.status(400).json({ error: 'books 배열이 필요합니다' });
   }
 
   try {
-    // 모든 책의 크롤링 URL 목록 생성
+    const now = new Date();
+    const byIsbn = {};
+    for (const book of books) {
+      byIsbn[book.isbn] = { isbn: book.isbn, options: [], fromCache: false };
+    }
+
+    // 1. 캐시 확인 — 유효한 캐시 있는 책은 DB에서 바로 가져오기
+    const cachedRows = await prisma.crawlCache.findMany({
+      where: {
+        isbn13: { in: books.map(b => b.isbn) },
+        expiresAt: { gt: now },
+      },
+    });
+
+    const cachedIsbns = new Set();
+    for (const row of cachedRows) {
+      byIsbn[row.isbn13].options.push({
+        sellerType: row.sellerType,
+        sellerId:   row.sellerId,
+        sellerName: row.sellerName,
+        sellerLink: row.sellerLink,
+        productLink: row.productLink,
+        price:      row.price,
+        shipping:   row.shipping,
+        discount:   row.discount,
+        condition:  row.condition,
+      });
+      cachedIsbns.add(row.isbn13);
+    }
+
+    // 2. 캐시 없는 책만 크롤링
     const urlList = [];
     for (const book of books) {
+      if (cachedIsbns.has(book.isbn)) continue;
       if (book.aladinUsedLink) urlList.push({ url: book.aladinUsedLink, type: 'aladinUsed', isbn: book.isbn });
       if (book.userUsedLink)   urlList.push({ url: book.userUsedLink,   type: 'userUsed',   isbn: book.isbn });
       if (book.spaceUsedLink)  urlList.push({ url: book.spaceUsedLink,  type: 'spaceUsed',  isbn: book.isbn });
     }
 
-    const allOptions = await fetchAll(urlList);
+    if (urlList.length > 0) {
+      const allOptions = await fetchAll(urlList);
+      for (const opt of allOptions) {
+        if (byIsbn[opt.isbn]) byIsbn[opt.isbn].options.push(opt);
+      }
 
-    // isbn별로 그룹화
-    const byIsbn = {};
-    for (const book of books) {
-      byIsbn[book.isbn] = { isbn: book.isbn, options: [] };
-    }
-    for (const option of allOptions) {
-      if (byIsbn[option.isbn]) {
-        byIsbn[option.isbn].options.push(option);
+      // 3. 크롤링 결과 DB에 저장 (isbn 단위로 기존 캐시 삭제 후 새로 삽입)
+      const crawledIsbns = [...new Set(allOptions.map(o => o.isbn))];
+      if (crawledIsbns.length > 0) {
+        await prisma.crawlCache.deleteMany({
+          where: { isbn13: { in: crawledIsbns } },
+        });
+        const expiresAt = new Date(now.getTime() + CACHE_TTL_HOURS * 60 * 60 * 1000);
+        await prisma.crawlCache.createMany({
+          data: allOptions.map(opt => ({
+            isbn13:      opt.isbn,
+            sellerType:  opt.sellerType,
+            sellerId:    opt.sellerId,
+            sellerName:  opt.sellerName,
+            sellerLink:  opt.sellerLink,
+            productLink: opt.productLink,
+            price:       opt.price,
+            shipping:    opt.shipping,
+            discount:    opt.discount,
+            condition:   opt.condition,
+            expiresAt,
+          })),
+        });
       }
     }
 

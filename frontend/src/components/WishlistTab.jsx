@@ -3,7 +3,7 @@ import { updateMustInclude } from '../lib/api';
 
 const CONDITION_LABELS = { 최상: '최상', 상: '상', 중: '중', 하: '하' };
 
-export default function WishlistTab({ wishlist, onRemove, onToggleMust, onAnalyze }) {
+export default function WishlistTab({ wishlist, onRemove, onToggleMust, onAnalyze, onOptimize, currentResults }) {
   const [budget, setBudget] = useState({ min: '', max: '' });
   const [globalCondition, setGlobalCondition] = useState('중');
   const [globalDays, setGlobalDays] = useState('7');
@@ -21,20 +21,39 @@ export default function WishlistTab({ wishlist, onRemove, onToggleMust, onAnalyz
       return;
     }
     setLoading(true);
-    onAnalyze({ books: wishlist.map(b => ({ ...b, options: [] })), crawling: true });
 
-    // 각 책마다 lookup → crawl 순서로 처리
-    const bookData = wishlist.map(b => ({ ...b, options: [] }));
+    const currentIsbns = new Set(wishlist.map(b => b.isbn13));
 
+    // 기존 결과에서 재사용할 수 있는 책 데이터 추출
+    const cachedByIsbn = {};
+    if (currentResults?.books) {
+      for (const b of currentResults.books) {
+        if (currentIsbns.has(b.isbn13)) cachedByIsbn[b.isbn13] = b;
+      }
+    }
+
+    // 새로 크롤링 필요한 책 (기존 결과에 없는 것)
+    const toFetch = wishlist.filter(b => !cachedByIsbn[b.isbn13]);
+
+    // 초기 bookData: 캐시된 건 그대로, 새 책은 빈 options
+    const bookData = wishlist.map(b =>
+      cachedByIsbn[b.isbn13]
+        ? { ...cachedByIsbn[b.isbn13] }
+        : { ...b, options: [] }
+    );
+
+    onAnalyze({ books: [...bookData], crawling: toFetch.length > 0, meta: { isbns: [...currentIsbns] } });
+
+    // 새 책만 lookup → crawl
     for (let i = 0; i < wishlist.length; i++) {
       const book = wishlist[i];
+      if (cachedByIsbn[book.isbn13]) continue; // 캐시 있으면 스킵
+
       try {
-        // 1. lookup으로 usedList URL 가져오기
         const lookupRes = await fetch(`/api/lookup?isbn13=${book.isbn13}`);
         const lookupData = await lookupRes.json();
         const usedList = lookupData.usedList;
 
-        // 새책 옵션 추가
         bookData[i].options.push({
           sellerType: 'new',
           sellerName: '알라딘 새책',
@@ -46,9 +65,8 @@ export default function WishlistTab({ wishlist, onRemove, onToggleMust, onAnalyz
           productLink: lookupData.link,
         });
 
-        onAnalyze({ books: [...bookData], crawling: true });
+        onAnalyze({ books: [...bookData], crawling: true, meta: { isbns: [...currentIsbns] } });
 
-        // 2. 크롤링할 URL 목록 구성
         const urlList = [];
         if (usedList?.aladinUsed?.link) urlList.push({ url: usedList.aladinUsed.link, type: 'aladinUsed', isbn: book.isbn13 });
         if (usedList?.userUsed?.link)   urlList.push({ url: usedList.userUsed.link,   type: 'userUsed',   isbn: book.isbn13 });
@@ -65,7 +83,8 @@ export default function WishlistTab({ wishlist, onRemove, onToggleMust, onAnalyz
           bookData[i].options.push(...crawled);
         }
 
-        onAnalyze({ books: [...bookData], crawling: i < wishlist.length - 1 });
+        const remaining = toFetch.filter(b => !bookData.find(bd => bd.isbn13 === b.isbn13 && bd.options.length > 0));
+        onAnalyze({ books: [...bookData], crawling: i < wishlist.length - 1 && toFetch.length > 1, meta: { isbns: [...currentIsbns] } });
       } catch (e) {
         console.error('크롤링 오류', book.isbn13, e);
       }
@@ -183,9 +202,29 @@ export default function WishlistTab({ wishlist, onRemove, onToggleMust, onAnalyz
           총 {wishlist.length}권 | 정가 합계{' '}
           {wishlist.reduce((s, b) => s + (b.priceStandard || 0), 0).toLocaleString()}원
         </span>
-        <button style={styles.analyzeBtn} onClick={handleAnalyze} disabled={loading}>
-          {loading ? '분석중...' : '최적 조합 분석 →'}
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button style={styles.analyzeBtn} onClick={handleAnalyze} disabled={loading}>
+            {loading ? '수집중...' : '매물 확인 →'}
+          </button>
+          <button
+            style={{ ...styles.analyzeBtn, background: '#0066cc' }}
+            disabled={loading || !currentResults?.books?.length}
+            onClick={() => {
+              if (!currentResults?.books?.length) return;
+              const constraints = {
+                minCondition: globalCondition,
+                budget: {
+                  min: budget.min ? Number(budget.min) : 0,
+                  max: budget.max ? Number(budget.max) : 400000,
+                },
+                topK: 10,
+              };
+              onOptimize(currentResults.books, constraints);
+            }}
+          >
+            조합 분석 →
+          </button>
+        </div>
       </div>
     </div>
   );
