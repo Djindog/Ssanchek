@@ -35,14 +35,35 @@ function parseUsedList(html, sellerType) {
     ).first().text();
     const discount = parseInt(discountLi.replace(/[^0-9]/g, '') || '0');
 
-    const sellerEl = $(row).find('.seller a').first();
-    const sellerName = sellerEl.text().trim();
-    const sellerHref = sellerEl.attr('href') || '';
+    // 판매처 유형 판별 및 판매자명/링크 추출
+    let sellerName = '';
+    let sellerHref = '';
+    let detectedType = sellerType;
+
+    const spaceEl = $(row).find('.Ere_used_store');
+    const storeNameEl = $(row).find('.Ere_store_name a');
+
+    if (spaceEl.length) {
+      // 광활한우주점
+      detectedType = 'spaceUsed';
+      sellerName = storeNameEl.text().replace(/\s+/g, ' ').trim(); // 지점명
+      sellerHref = storeNameEl.attr('href') || '';
+    } else {
+      const sellerEl = $(row).find('.seller a').last();
+      sellerName = sellerEl.text().trim();
+      sellerHref = sellerEl.attr('href') || '';
+
+      // 알라딘 직배송 여부 (SC 없으면 알라딘 자체)
+      if (!sellerHref.includes('SC=') && sellerType === 'aladinUsed') {
+        detectedType = 'aladinUsed';
+        sellerName = '';
+      }
+    }
+
     const sellerLink = sellerHref.startsWith('http')
       ? sellerHref
-      : `https://www.aladin.co.kr${sellerHref}`;
+      : sellerHref ? `https://www.aladin.co.kr${sellerHref}` : '';
 
-    // 판매자 ID 추출 (SC=xxxxx)
     const scMatch = sellerHref.match(/SC=(\d+)/);
     const sellerId = scMatch ? scMatch[1] : sellerName;
 
@@ -53,7 +74,7 @@ function parseUsedList(html, sellerType) {
       : `https://www.aladin.co.kr${productHref}`;
 
     results.push({
-      sellerType,
+      sellerType: detectedType,
       sellerId,
       sellerName,
       sellerLink,

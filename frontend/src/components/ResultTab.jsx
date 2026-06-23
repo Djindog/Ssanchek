@@ -112,9 +112,9 @@ export default function ResultTab({ results }) {
                     <th style={styles.th}>판매처</th>
                     <th style={styles.th}>판매자</th>
                     <th style={styles.th}>등급</th>
-                    <th style={{ ...styles.th, textAlign: 'right' }}>판매가</th>
-                    <th style={{ ...styles.th, textAlign: 'right' }}>배송비</th>
-                    <th style={{ ...styles.th, textAlign: 'right' }}>할인율</th>
+                    <th style={styles.th}>판매가</th>
+                    <th style={styles.th}>배송비</th>
+                    <th style={styles.th}>할인율</th>
                     <th style={styles.th}></th>
                   </tr>
                 </thead>
@@ -257,7 +257,7 @@ const styles = {
   table: { width: '100%', borderCollapse: 'collapse' },
   th: {
     padding: '8px 12px',
-    textAlign: 'left',
+    textAlign: 'center',
     borderBottom: '2px solid #eee',
     fontWeight: 'bold',
     color: '#555',
@@ -265,9 +265,9 @@ const styles = {
     background: '#fff',
   },
   tr: { borderBottom: '1px solid #f0f0f0', transition: 'background 0.1s' },
-  td: { padding: '10px 12px', fontSize: '14px', color: '#222' },
+  td: { padding: '10px 12px', fontSize: '14px', color: '#222', textAlign: 'center' },
   tdCenter: { padding: '10px 12px', textAlign: 'center' },
-  tdRight: { padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap' },
+  tdRight: { padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' },
   typePill: {
     border: '1px solid',
     padding: '2px 10px',
