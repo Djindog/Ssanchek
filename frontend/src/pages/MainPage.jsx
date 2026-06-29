@@ -34,7 +34,6 @@ export default function MainPage() {
 
     setWishlist(prev => [...prev, { ...book, mustInclude: false }]);
     addToWishlistDB(book);
-    setActiveTab('wishlist');
 
     setResults(prev => ({
       ...(prev || {}),
@@ -127,7 +126,6 @@ export default function MainPage() {
     // 전체 한번에 위시리스트 추가
     setWishlist(prev => [...prev, ...books.map(b => ({ ...b, mustInclude: false }))]);
     books.forEach(b => addToWishlistDB(b));
-    setActiveTab('wishlist');
     setResults(prev => ({
       ...(prev || {}),
       books: [...(prev?.books || []), ...books.map(b => ({ ...b, options: [] }))],
@@ -241,8 +239,13 @@ export default function MainPage() {
             onClick={() => setActiveTab(tab.id)}
           >
             {tab.label}
-            {tab.id === 'wishlist' && wishlist.length > 0 && (
-              <span style={styles.badge}>{wishlist.length}</span>
+            {tab.id === 'wishlist' && (wishlist.length > 0 || results?.crawling) && (
+              <span style={{
+                ...styles.badge,
+                ...(results?.crawling ? { animation: 'badge-pulse 0.9s ease-in-out infinite' } : {}),
+              }}>
+                {results?.crawling ? '···' : wishlist.length}
+              </span>
             )}
           </button>
         ))}
