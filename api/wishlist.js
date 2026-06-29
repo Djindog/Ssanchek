@@ -6,11 +6,16 @@ export default async function handler(req, res) {
   if (!userId) return res.status(401).json({ error: '인증 필요' });
 
   // 유저 upsert (최초 요청 시 자동 생성)
-  await prisma.user.upsert({
-    where: { id: userId },
-    update: {},
-    create: { id: userId, email: `${userId}@ssanchek.com` },
-  });
+  try {
+    await prisma.user.upsert({
+      where: { id: userId },
+      update: {},
+      create: { id: userId, email: `${userId}@ssanchek.com` },
+    });
+  } catch (e) {
+    console.error('PRISMA ERROR code:', e.code, 'meta:', JSON.stringify(e.meta), 'message:', e.message, 'cause:', e.cause?.message);
+    return res.status(500).json({ error: e.code, meta: e.meta, message: e.message });
+  }
 
   // 위시리스트 1개만 사용 (유저당)
   async function getOrCreateWishlist() {

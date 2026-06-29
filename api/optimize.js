@@ -164,7 +164,8 @@ function calcTotalCost(node, multiIndex) {
     if (choice.type === 'multi') {
       bookCost += choice.cost;
       if (!multiSpend.has(choice._sid)) {
-        multiSpend.set(choice._sid, { total: 0, shipping: choice.opt.shipping, isAladin: choice.opt.sellerType === 'aladinUsed' });
+        const st = choice.opt.sellerType;
+        multiSpend.set(choice._sid, { total: 0, shipping: choice.opt.shipping, freeEligible: st === 'aladinUsed' || st === 'spaceUsed' });
       }
       multiSpend.get(choice._sid).total += choice.cost;
     } else {
@@ -174,9 +175,9 @@ function calcTotalCost(node, multiIndex) {
   }
 
   let shipping = 0;
-  for (const { total, shipping: s, isAladin } of multiSpend.values()) {
-    // spaceUsed와 aladinUsed 모두 2만원 이상이면 무료
-    const free = (isAladin || true) && total >= 20000; // spaceUsed도 동일 조건
+  for (const { total, shipping: s, freeEligible } of multiSpend.values()) {
+    // aladinUsed, spaceUsed만 2만원 이상이면 무료 (판매자 중고 userUsed는 해당 없음)
+    const free = freeEligible && total >= 20000;
     shipping += free ? 0 : s;
   }
 
@@ -296,7 +297,7 @@ export default async function handler(req, res) {
   const {
     minCondition = null,
     budget = { min: 0, max: 400000 },
-    topK = 10,
+    topK = 20,
   } = constraints;
 
   try {
