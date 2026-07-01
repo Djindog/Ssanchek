@@ -3,10 +3,12 @@ const TTB_KEY = process.env.ALADIN_TTB_KEY;
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { isbn13 } = req.query;
-  if (!isbn13) return res.status(400).json({ error: 'isbn13 파라미터가 필요합니다' });
+  const { isbn13, isbn, itemId } = req.query;
+  const id = isbn13 || isbn || itemId;
+  const itemIdType = isbn13 ? 'ISBN13' : isbn ? 'ISBN' : 'ItemId';
+  if (!id) return res.status(400).json({ error: 'isbn13, isbn, 또는 itemId 파라미터가 필요합니다' });
 
-  const url = `http://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${TTB_KEY}&itemIdType=ISBN13&ItemId=${isbn13}&output=js&Version=20131101&Cover=Mid&OptResult=usedList`;
+  const url = `http://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${TTB_KEY}&itemIdType=${itemIdType}&ItemId=${id}&output=js&Version=20131101&Cover=Mid&OptResult=usedList`;
 
   try {
     const apiRes = await fetch(url);

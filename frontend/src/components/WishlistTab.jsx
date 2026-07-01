@@ -6,7 +6,7 @@ const SELLER_TYPE_LABEL = {
   new: '새책', aladinUsed: '알라딘 중고', userUsed: '판매자 중고', spaceUsed: '광활한우주점',
 };
 const SELLER_TYPE_COLOR = {
-  new: '#0066cc', aladinUsed: '#e6003e', userUsed: '#555', spaceUsed: '#7b3fa0',
+  new: 'var(--color-primary)', aladinUsed: '#e6003e', userUsed: '#555', spaceUsed: '#7b3fa0',
 };
 const CONDITION_COLOR = { '최상': '#e6007e', '상': '#00a650', '중': '#888', '하': '#bbb' };
 
@@ -85,7 +85,7 @@ export default function WishlistTab({ results, onRemove }) {
               {SORT_OPTIONS.map(o => (
                 <div
                   key={o.value}
-                  style={{ ...styles.dropItem, fontWeight: sortKey === o.value ? 'bold' : 'normal', color: sortKey === o.value ? '#0066cc' : '#222' }}
+                  style={{ ...styles.dropItem, fontWeight: sortKey === o.value ? 'bold' : 'normal', color: sortKey === o.value ? 'var(--color-primary)' : '#222' }}
                   onClick={() => { setSortKey(o.value); setSortOpen(false); }}
                 >
                   {o.label}
@@ -246,7 +246,7 @@ export default function WishlistTab({ results, onRemove }) {
 const styles = {
   empty: { textAlign: 'center', paddingTop: '60px', color: '#444', fontFamily: FONT },
   progressBar: { height: '3px', background: '#e8e8e8', marginBottom: '16px', overflow: 'hidden' },
-  progressFill: { height: '100%', width: '40%', background: '#0066cc', animation: 'slide 1.2s infinite ease-in-out' },
+  progressFill: { height: '100%', width: '40%', background: 'var(--color-primary)', animation: 'slide 1.2s infinite ease-in-out' },
   controlBar: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' },
   controlLabel: { fontSize: '13px', color: '#555', fontWeight: 'bold' },
   dropWrap: { position: 'relative' },
@@ -262,20 +262,20 @@ const styles = {
     boxShadow: '0 4px 12px rgba(0,0,0,0.12)', zIndex: 100, minWidth: '140px',
   },
   dropItem: { padding: '8px 14px', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' },
-  check: { cursor: 'pointer', accentColor: '#0066cc' },
-  bookSection: { background: '#fff', border: '1px solid #e8e8e8', borderLeft: '4px solid #0066cc', marginBottom: '14px' },
+  check: { cursor: 'pointer', accentColor: 'var(--color-primary)' },
+  bookSection: { background: '#fff', border: '1px solid #e8e8e8', borderLeft: '4px solid var(--color-primary)', marginBottom: '14px' },
   bookHeader: { display: 'flex', alignItems: 'flex-start', gap: '16px', padding: '16px', borderBottom: '1px solid #f0f0f0' },
   cover: { width: '56px', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.15)' },
   bookInfo: { flex: 1 },
   bookTitle: { display: 'block', fontWeight: 'bold', fontSize: '15px', color: '#222', textDecoration: 'none', marginBottom: '4px', transition: 'color 0.1s' },
-  bookTitleHover: { color: '#0066cc', textDecoration: 'underline' },
+  bookTitleHover: { color: 'var(--color-primary)', textDecoration: 'underline' },
   bookMeta: { fontSize: '12px', color: '#888', marginBottom: '8px' },
   newRow: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' },
-  newBadge: { background: '#0066cc', color: '#fff', padding: '2px 9px', fontSize: '12px', fontWeight: 'bold', borderRadius: '20px' },
+  newBadge: { background: 'var(--color-primary)', color: '#fff', padding: '2px 9px', fontSize: '12px', fontWeight: 'bold', borderRadius: '20px' },
   newPrice: { fontWeight: 'bold', color: '#e6003e', fontSize: '15px' },
-  newShip: { fontSize: '12px', color: '#0066cc' },
+  newShip: { fontSize: '12px', color: 'var(--color-primary)' },
   newDiscount: { fontSize: '12px', color: '#888' },
-  toggleBtn: { background: 'none', color: '#0066cc', fontSize: '13px', whiteSpace: 'nowrap', textDecoration: 'underline', flexShrink: 0, cursor: 'pointer' },
+  toggleBtn: { background: 'none', color: 'var(--color-primary)', fontSize: '13px', whiteSpace: 'nowrap', textDecoration: 'underline', flexShrink: 0, cursor: 'pointer' },
   removeBtn: { background: 'none', color: '#e6003e', fontSize: '13px', textDecoration: 'underline', cursor: 'pointer', whiteSpace: 'nowrap' },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { padding: '8px 4px', textAlign: 'center', borderBottom: '2px solid #eee', fontWeight: 'bold', color: '#555', fontSize: '13px', background: '#fff' },
@@ -287,8 +287,8 @@ const styles = {
   sellerLink: { color: '#333', textDecoration: 'none' },
   price: { color: '#e6003e', fontWeight: 'bold', fontSize: '14px' },
   discountSub: { fontSize: '12px', color: '#e6003e', opacity: 0.75 },
-  freeShip: { color: '#0066cc', fontWeight: 'bold', fontSize: '13px' },
+  freeShip: { color: 'var(--color-primary)', fontWeight: 'bold', fontSize: '13px' },
   spaceShip: { color: '#7b3fa0', fontSize: '12px', fontWeight: 'bold' },
-  buyBtn: { background: '#0066cc', color: '#fff', padding: '4px 10px', fontSize: '12px', display: 'inline-block', textDecoration: 'none', borderRadius: '3px', fontWeight: 'bold', whiteSpace: 'nowrap' },
+  buyBtn: { background: 'var(--color-primary)', color: '#fff', padding: '4px 10px', fontSize: '12px', display: 'inline-block', textDecoration: 'none', borderRadius: '3px', fontWeight: 'bold', whiteSpace: 'nowrap' },
   noUsed: { padding: '12px 16px', color: '#aaa', fontSize: '13px' },
 };

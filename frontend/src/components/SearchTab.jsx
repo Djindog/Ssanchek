@@ -2,27 +2,37 @@ import { useState, useRef } from 'react';
 
 const FONT = "'Apple SD Gothic Neo', 'Malgun Gothic', 'Nanum Gothic', sans-serif";
 
-function parseISBN13FromXLS(text) {
+function parseISBNsFromXLS(text) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(text, 'text/html');
-  const isbns = [];
+  const items = []; // { value, type: 'ISBN13' | 'ISBN' }
 
   for (const table of doc.querySelectorAll('table')) {
     const rows = [...table.querySelectorAll('tr')];
-    let col = -1;
+    let col13 = -1, col10 = -1, colTitle = -1;
+
     for (const row of rows) {
       const cells = [...row.querySelectorAll('td, th')];
-      if (col === -1) {
-        const idx = cells.findIndex(c => c.textContent.trim() === 'ISBN13');
-        if (idx !== -1) { col = idx; continue; }
+      if (col13 === -1 && col10 === -1) {
+        const i13 = cells.findIndex(c => c.textContent.trim() === 'ISBN13');
+        const i10 = cells.findIndex(c => c.textContent.trim() === 'ISBN');
+        const iTitle = cells.findIndex(c => c.textContent.trim() === '상품명');
+        if (i13 !== -1 || i10 !== -1) { col13 = i13; col10 = i10; colTitle = iTitle; continue; }
         continue;
       }
-      const val = cells[col]?.textContent?.trim() ?? '';
-      if (/^97[89]\d{10}$/.test(val)) isbns.push(val);
+      const v13 = col13 !== -1 ? (cells[col13]?.textContent?.trim() ?? '') : '';
+      const v10 = col10 !== -1 ? (cells[col10]?.textContent?.trim() ?? '') : '';
+      const title = colTitle !== -1 ? (cells[colTitle]?.textContent?.trim() ?? '') : '';
+      if (/^97[89]\d{10}$/.test(v13)) {
+        items.push({ value: v13, type: 'ISBN13', title });
+      } else if (/^\d{9}[\dX]$/i.test(v10) || /^U\d+$/.test(v10)) {
+        items.push({ value: v10, type: 'ISBN', title });
+      }
     }
   }
 
-  return [...new Set(isbns)];
+  const seen = new Set();
+  return items.filter(({ value }) => seen.has(value) ? false : seen.add(value));
 }
 
 export default function SearchTab({ wishlist, onAdd, onBulkAdd, query, onQueryChange, results, onResultsChange }) {
@@ -59,11 +69,11 @@ export default function SearchTab({ wishlist, onAdd, onBulkAdd, query, onQueryCh
 
     try {
       const text = await importFile.text();
-      const isbns = parseISBN13FromXLS(text);
+      const isbns = parseISBNsFromXLS(text);
 
       if (!isbns.length) {
         setImportStatus('error');
-        setError('ISBN13을 찾을 수 없습니다. 올바른 파일인지 확인해주세요.');
+        setError('ISBN을 찾을 수 없습니다. 올바른 파일인지 확인해주세요.');
         return;
       }
 
@@ -250,17 +260,36 @@ export default function SearchTab({ wishlist, onAdd, onBulkAdd, query, onQueryCh
           )}
 
           {importStatus === 'done' && importResult && (
-            <div style={styles.doneMsg}>
-              ✓ {importResult.added}권 추가됨
-              {importResult.skipped > 0 && (
-                <span style={{ color: '#888', fontWeight: 'normal' }}> ({importResult.skipped}권 이미 있음)</span>
+            <div style={styles.doneBox}>
+              <div style={styles.doneMsg}>
+                ✓ {importResult.added}권 추가됨
+                {importResult.skipped > 0 && (
+                  <span style={{ color: '#888', fontWeight: 'normal' }}> ({importResult.skipped}권 이미 있음)</span>
+                )}
+                {importResult.failed > 0 && (
+                  <span style={{ color: '#e6003e', fontWeight: 'normal' }}> · {importResult.failed}권 실패</span>
+                )}
+              </div>
+              {importResult.titles?.length > 0 && (
+                <ul style={styles.titleList}>
+                  {importResult.titles.map((t, i) => (
+                    <li key={i} style={styles.titleItem}>· {t}</li>
+                  ))}
+                </ul>
               )}
-              {importResult.failed > 0 && (
-                <span style={{ color: '#e6003e', fontWeight: 'normal' }}> · {importResult.failed}권 실패</span>
+              {importResult.failedItems?.length > 0 && (
+                <ul style={{ ...styles.titleList, marginTop: '8px' }}>
+                  {importResult.failedItems.map((f, i) => (
+                    <li key={i} style={{ ...styles.titleItem, color: '#e6003e' }}>
+                      · {f.title ? <span>{f.title}</span> : <code style={{ fontSize: '11px', background: '#fff0f0', padding: '1px 4px', borderRadius: '3px' }}>{f.value}</code>}
+                      <span style={{ color: '#999', fontWeight: 'normal' }}> — {f.reason}</span>
+                    </li>
+                  ))}
+                </ul>
               )}
-              <span style={{ color: '#888', fontSize: '12px', fontWeight: 'normal' }}>
-                {' '}— 위시리스트 탭에서 매물 수집 현황을 확인하세요
-              </span>
+              <div style={{ color: '#888', fontSize: '12px', marginTop: '8px' }}>
+                위시리스트 탭에서 매물 수집 현황을 확인하세요
+              </div>
             </div>
           )}
 
@@ -283,15 +312,15 @@ const styles = {
     fontWeight: 'bold', fontSize: '14px', fontFamily: 'inherit',
     borderBottom: '2px solid transparent', marginBottom: '-2px',
   },
-  modeBtnActive: { color: '#0066cc', borderBottom: '2px solid #0066cc' },
+  modeBtnActive: { color: 'var(--color-primary)', borderBottom: '2px solid var(--color-primary)' },
 
   searchRow: { display: 'flex', gap: '8px', marginBottom: '20px' },
   searchInput: { flex: 1, border: '1px solid #ddd', padding: '10px 14px', fontSize: '15px', outline: 'none' },
-  searchBtn: { background: '#0066cc', color: '#fff', padding: '10px 24px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer' },
+  searchBtn: { background: 'var(--color-primary)', color: '#fff', padding: '10px 24px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer' },
   error: { color: '#e6003e', marginBottom: '12px' },
   table: { width: '100%', borderCollapse: 'collapse', background: '#fff' },
   thead: { background: '#f0f5ff' },
-  th: { padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #0066cc', fontWeight: 'bold', color: '#333' },
+  th: { padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid var(--color-primary)', fontWeight: 'bold', color: '#333' },
   tr: { borderBottom: '1px solid #eee' },
   tdCover: { padding: '12px', width: '80px' },
   cover: { width: '60px', display: 'block' },
@@ -301,7 +330,7 @@ const styles = {
   tdPrice: { padding: '12px', textAlign: 'right', color: '#444', whiteSpace: 'nowrap' },
   salePrice: { color: '#e6003e', fontWeight: 'bold' },
   tdAction: { padding: '12px', textAlign: 'center' },
-  btnAdd: { background: '#0066cc', color: '#fff', padding: '6px 14px', fontSize: '13px', cursor: 'pointer' },
+  btnAdd: { background: 'var(--color-primary)', color: '#fff', padding: '6px 14px', fontSize: '13px', cursor: 'pointer' },
   btnAdded: { background: '#ccc', color: '#fff', padding: '6px 14px', fontSize: '13px', cursor: 'default' },
   empty: { color: '#888', textAlign: 'center', marginTop: '40px' },
 
@@ -310,7 +339,7 @@ const styles = {
     background: '#f5f8ff', border: '1px solid #d0dff5',
     padding: '16px 20px', borderRadius: '6px', marginBottom: '20px',
   },
-  guideTitle: { fontWeight: 'bold', fontSize: '15px', color: '#0066cc', marginBottom: '8px' },
+  guideTitle: { fontWeight: 'bold', fontSize: '15px', color: 'var(--color-primary)', marginBottom: '8px' },
   guideText: { fontSize: '13px', color: '#444', lineHeight: '1.8' },
   uploadRow: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' },
   fileBtn: {
@@ -319,12 +348,15 @@ const styles = {
   },
   fileName: { fontSize: '13px', color: '#666', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   confirmBtn: {
-    background: '#0066cc', color: '#fff', padding: '8px 20px',
+    background: 'var(--color-primary)', color: '#fff', padding: '8px 20px',
     fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', borderRadius: '4px', flexShrink: 0,
   },
   progressWrap: { marginBottom: '8px' },
   progressBar: { height: '4px', background: '#e8e8e8', borderRadius: '2px', overflow: 'hidden', marginBottom: '6px' },
-  progressFill: { height: '100%', background: '#0066cc', transition: 'width 0.3s ease' },
+  progressFill: { height: '100%', background: 'var(--color-primary)', transition: 'width 0.3s ease' },
   statusText: { fontSize: '13px', color: '#666' },
-  doneMsg: { fontSize: '14px', fontWeight: 'bold', color: '#00a650', padding: '4px 0' },
+  doneBox: { padding: '4px 0' },
+  doneMsg: { fontSize: '14px', fontWeight: 'bold', color: '#00a650', marginBottom: '8px' },
+  titleList: { listStyle: 'none', margin: '0', padding: '0', display: 'flex', flexDirection: 'column', gap: '3px' },
+  titleItem: { fontSize: '13px', color: '#444', paddingLeft: '12px', position: 'relative' },
 };

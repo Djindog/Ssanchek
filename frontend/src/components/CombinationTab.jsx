@@ -7,7 +7,7 @@ const SELLER_TYPE_LABEL = {
   new: '새책', aladinUsed: '알라딘 중고', userUsed: '판매자 중고', spaceUsed: '우주점',
 };
 const SELLER_TYPE_COLOR = {
-  new: '#0066cc', aladinUsed: '#e6003e', userUsed: '#555', spaceUsed: '#7b3fa0',
+  new: 'var(--color-primary)', aladinUsed: '#e6003e', userUsed: '#555', spaceUsed: '#7b3fa0',
 };
 const CONDITION_COLOR = { '최상': '#e6007e', '상': '#00a650', '중': '#888', '하': '#bbb' };
 
@@ -39,7 +39,7 @@ function CondDropdown({ value, globalCondition, onChange }) {
           onClick={e => e.stopPropagation()}
         >
           <div
-            style={{ ...styles.smallDropItem, fontWeight: !value ? 'bold' : 'normal', color: !value ? '#0066cc' : '#222' }}
+            style={{ ...styles.smallDropItem, fontWeight: !value ? 'bold' : 'normal', color: !value ? 'var(--color-primary)' : '#222' }}
             onClick={() => { onChange(null); close(); }}
           >
             전체와 동일
@@ -123,7 +123,7 @@ function SellerDropdown({ allowed, selected, onToggle, disabled }) {
                   checked={selected.has(t) && isAllowed}
                   disabled={!isAllowed}
                   onChange={() => isAllowed && onToggle(t)}
-                  style={{ accentColor: '#0066cc' }}
+                  style={{ accentColor: 'var(--color-primary)' }}
                 />
                 <span style={{ color: SELLER_TYPE_COLOR[t], fontWeight: 'bold', fontSize: '12px' }}>
                   {SELLER_TYPE_LABEL[t]}
@@ -198,7 +198,7 @@ function DetailTable({ wishlist, globalCondition, globalSellerTypes, bookConditi
                   type="checkbox"
                   checked={!!book.mustInclude}
                   onChange={() => onToggleMust(book.isbn13, !book.mustInclude)}
-                  style={{ accentColor: '#0066cc', cursor: 'pointer', width: '16px', height: '16px' }}
+                  style={{ accentColor: 'var(--color-primary)', cursor: 'pointer', width: '16px', height: '16px' }}
                 />
               </td>
               <td style={{ ...styles.dtd, textAlign: 'center' }}>
@@ -320,7 +320,7 @@ export default function CombinationTab({ wishlist, results, combinations, loadin
                 {ALL_CONDITIONS.map(c => (
                   <div
                     key={c}
-                    style={{ ...styles.dropItem, fontWeight: globalCondition === c ? 'bold' : 'normal', color: globalCondition === c ? '#0066cc' : '#222' }}
+                    style={{ ...styles.dropItem, fontWeight: globalCondition === c ? 'bold' : 'normal', color: globalCondition === c ? 'var(--color-primary)' : '#222' }}
                     onClick={() => { setGlobalCondition(c); condDrop.close(); }}
                   >
                     {c}
@@ -341,7 +341,7 @@ export default function CombinationTab({ wishlist, results, combinations, loadin
                 {['1', '3', '5', '7'].map(d => (
                   <div
                     key={d}
-                    style={{ ...styles.dropItem, fontWeight: globalDays === d ? 'bold' : 'normal', color: globalDays === d ? '#0066cc' : '#222' }}
+                    style={{ ...styles.dropItem, fontWeight: globalDays === d ? 'bold' : 'normal', color: globalDays === d ? 'var(--color-primary)' : '#222' }}
                     onClick={() => { setGlobalDays(d); daysDrop.close(); }}
                   >
                     {d}일
@@ -361,7 +361,7 @@ export default function CombinationTab({ wishlist, results, combinations, loadin
               <div style={{ ...styles.portalMenu, top: sellerDrop.pos.top, left: sellerDrop.pos.left, minWidth: '160px' }} onClick={e => e.stopPropagation()}>
                 {ALL_SELLER_TYPES.map(t => (
                   <label key={t} style={styles.sellerItem}>
-                    <input type="checkbox" checked={globalSellerTypes.has(t)} onChange={() => toggleGlobalSeller(t)} style={{ accentColor: '#0066cc' }} />
+                    <input type="checkbox" checked={globalSellerTypes.has(t)} onChange={() => toggleGlobalSeller(t)} style={{ accentColor: 'var(--color-primary)' }} />
                     <span style={{ color: SELLER_TYPE_COLOR[t], fontWeight: 'bold', fontSize: '13px' }}>{SELLER_TYPE_LABEL[t]}</span>
                   </label>
                 ))}
@@ -515,7 +515,7 @@ function ResultSection({ combinations, expanded, setExpanded, hoveredRow, setHov
           <input
             type="checkbox" checked={dedupe}
             onChange={e => { setDedupe(e.target.checked); setExpanded({}); }}
-            style={{ accentColor: '#0066cc', cursor: 'pointer' }}
+            style={{ accentColor: 'var(--color-primary)', cursor: 'pointer' }}
           />
           중복 조합 제외 (같은 책 구성 중 최고 할인율만)
         </label>
@@ -556,7 +556,7 @@ function ResultSection({ combinations, expanded, setExpanded, hoveredRow, setHov
                           </tr>
                           <tr>
                             <td style={styles.breakdownLabel}>배송비</td>
-                            <td style={{ ...styles.breakdownValue, color: breakdown.shippingTotal === 0 ? '#0066cc' : '#444' }}>
+                            <td style={{ ...styles.breakdownValue, color: breakdown.shippingTotal === 0 ? 'var(--color-primary)' : '#444' }}>
                               {breakdown.shippingTotal === 0 ? '무료' : `${breakdown.shippingTotal.toLocaleString()}원`}
                             </td>
                           </tr>
@@ -711,7 +711,7 @@ function ResultSection({ combinations, expanded, setExpanded, hoveredRow, setHov
 const styles = {
   // 전체 제약조건
   constraintBox: { background: '#fff', border: '1px solid #ddd', padding: '16px 20px', marginBottom: '0', display: 'flex', flexDirection: 'column', gap: '10px' },
-  constraintTitle: { fontWeight: 'bold', color: '#0066cc', fontSize: '13px' },
+  constraintTitle: { fontWeight: 'bold', color: 'var(--color-primary)', fontSize: '13px' },
   constraintRow: { display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', flexWrap: 'wrap' },
   constraintLabel: { fontWeight: 'bold', color: '#444', fontSize: '13px', whiteSpace: 'nowrap' },
   budgetInput: { border: '1px solid #ddd', padding: '6px 10px', width: '130px', fontSize: '14px' },
@@ -723,7 +723,7 @@ const styles = {
 
   // 세부 조건
   detailHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', background: '#f0f5ff', borderTop: '1px solid #ddd', borderBottom: '1px solid #ddd', cursor: 'pointer', userSelect: 'none' },
-  detailTitle: { fontWeight: 'bold', fontSize: '13px', color: '#0066cc' },
+  detailTitle: { fontWeight: 'bold', fontSize: '13px', color: 'var(--color-primary)' },
   detailBody: { background: '#fff', border: '1px solid #ddd', borderTop: 'none', marginBottom: '0', overflowX: 'auto' },
   detailTable: { width: '100%', borderCollapse: 'collapse' },
   dth: { padding: '8px 12px', fontWeight: 'bold', fontSize: '12px', color: '#555', borderBottom: '2px solid #eee', background: '#f8f8f8', textAlign: 'center' },
@@ -733,18 +733,18 @@ const styles = {
 
   // 조합 분석 버튼
   analyzeRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderTop: '1px solid #eee', marginTop: '0' },
-  analyzeBtn: { background: '#0066cc', color: '#fff', padding: '11px 32px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', border: 'none' },
+  analyzeBtn: { background: 'var(--color-primary)', color: '#fff', padding: '11px 32px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', border: 'none' },
 
   // 결과 섹션
   empty: { textAlign: 'center', paddingTop: '40px', color: '#444', fontFamily: FONT },
   progressBar: { height: '3px', background: '#e8e8e8', overflow: 'hidden', maxWidth: '400px', margin: '0 auto' },
-  progressFill: { height: '100%', width: '40%', background: '#0066cc', animation: 'slide 1.2s infinite ease-in-out' },
+  progressFill: { height: '100%', width: '40%', background: 'var(--color-primary)', animation: 'slide 1.2s infinite ease-in-out' },
   controlBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' },
   dedupeLabel: { display: 'flex', alignItems: 'center', gap: '7px', fontSize: '13px', color: '#444', cursor: 'pointer', userSelect: 'none' },
-  card: { background: '#fff', border: '1px solid #e8e8e8', borderLeft: '4px solid #0066cc', marginBottom: '10px' },
+  card: { background: '#fff', border: '1px solid #e8e8e8', borderLeft: '4px solid var(--color-primary)', marginBottom: '10px' },
   cardHeader: { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', gap: '12px' },
   headerLeft: { display: 'flex', alignItems: 'baseline', gap: '10px', flex: 1, minWidth: 0 },
-  rank: { fontSize: '13px', fontWeight: 'bold', color: '#0066cc', flexShrink: 0 },
+  rank: { fontSize: '13px', fontWeight: 'bold', color: 'var(--color-primary)', flexShrink: 0 },
   titles: { fontSize: '14px', color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   headerRight: { display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 },
   totalCost: { fontSize: '15px', fontWeight: 'bold', color: '#e6003e' },
@@ -764,12 +764,12 @@ const styles = {
   sellerLinkStyle: { color: '#555', textDecoration: 'none' },
   price: { color: '#e6003e', fontWeight: 'bold', fontSize: '14px' },
   discountSub: { fontSize: '11px', color: '#e6003e', opacity: 0.8 },
-  freeShip: { color: '#0066cc', fontWeight: 'bold', fontSize: '12px' },
+  freeShip: { color: 'var(--color-primary)', fontWeight: 'bold', fontSize: '12px' },
   spaceShip: { color: '#7b3fa0', fontSize: '11px', fontWeight: 'bold' },
   strikeWrap: { position: 'relative', display: 'inline-block', cursor: 'help' },
   strikeText: { color: '#bbb', fontSize: '12px', textDecoration: 'line-through' },
   tooltip: { position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)', background: '#333', color: '#fff', fontSize: '12px', lineHeight: '1.5', padding: '7px 11px', borderRadius: '5px', whiteSpace: 'normal', width: '220px', textAlign: 'center', zIndex: 200, pointerEvents: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.25)' },
-  buyBtn: { background: '#0066cc', color: '#fff', padding: '4px 10px', fontSize: '12px', display: 'inline-block', textDecoration: 'none', borderRadius: '3px', fontWeight: 'bold', whiteSpace: 'nowrap' },
+  buyBtn: { background: 'var(--color-primary)', color: '#fff', padding: '4px 10px', fontSize: '12px', display: 'inline-block', textDecoration: 'none', borderRadius: '3px', fontWeight: 'bold', whiteSpace: 'nowrap' },
   breakdownTooltip: {
     position: 'absolute', bottom: 'calc(100% + 10px)', right: 0,
     background: '#fff', border: '1px solid #ddd', borderRadius: '6px',

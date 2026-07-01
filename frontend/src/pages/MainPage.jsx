@@ -94,27 +94,62 @@ export default function MainPage() {
 
   async function bulkAddBooks(isbns, onProgress) {
     const existingSet = new Set(wishlist.map(b => b.isbn13));
-    const newIsbns = isbns.filter(isbn => !existingSet.has(isbn));
-    const skipped = isbns.length - newIsbns.length;
+    // ISBN13 타입은 바로 필터, ISBN(10자리) 타입은 lookup 후 중복 확인
+    const toFetch = isbns.filter(({ value, type }) => type !== 'ISBN13' || !existingSet.has(value));
+    const preSkipped = isbns.length - toFetch.length;
 
-    if (!newIsbns.length) return { added: 0, skipped, failed: 0 };
+    if (!toFetch.length) return { added: 0, skipped: preSkipped, failed: 0 };
 
     // 배치 조회 (5개씩 병렬)
     const lookupData = [];
+    const failedItems = []; // { value, reason }
     const BATCH = 5;
-    for (let i = 0; i < newIsbns.length; i += BATCH) {
-      const batch = newIsbns.slice(i, i + BATCH);
+    for (let i = 0; i < toFetch.length; i += BATCH) {
+      const batch = toFetch.slice(i, i + BATCH);
       const settled = await Promise.allSettled(
-        batch.map(isbn => fetch(`/api/lookup?isbn13=${isbn}`).then(r => r.json()))
+        batch.map(async ({ value, type }) => {
+          const param = type === 'ISBN13' ? `isbn13=${value}` : `isbn=${value}`;
+          const res = await fetch(`/api/lookup?${param}`);
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+          return data;
+        })
       );
-      for (const r of settled) {
-        if (r.status === 'fulfilled' && r.value?.isbn13) lookupData.push(r.value);
+      for (let j = 0; j < settled.length; j++) {
+        const r = settled[j];
+        const { value, title: xlsTitle } = batch[j];
+        if (r.status === 'rejected') {
+          failedItems.push({ value, title: xlsTitle || null, reason: r.reason?.message || '네트워크 오류' });
+          continue;
+        }
+        const d = r.value;
+        if (d.isbn13) {
+          lookupData.push(d);
+        } else if (d.subInfo?.usedList || d.usedList) {
+          // U-접두어 중고 ID 등 isbn13이 비어있을 때: usedList 링크에서 알라딘 ItemId 추출 후 재조회
+          const usedList = d.usedList ?? d.subInfo?.usedList;
+          const anyLink = usedList?.aladinUsed?.link || usedList?.userUsed?.link || usedList?.spaceUsed?.link;
+          const m = anyLink?.match(/[?&]ItemId=(\d+)/i);
+          if (m) {
+            try {
+              const retry = await fetch(`/api/lookup?itemId=${m[1]}`).then(r2 => r2.json());
+              if (retry?.isbn13) { lookupData.push(retry); continue; }
+            } catch { /* fall through */ }
+          }
+          failedItems.push({ value, title: xlsTitle || d.title || null, reason: 'ISBN13 식별 불가' });
+        } else {
+          failedItems.push({ value, title: xlsTitle || d.title || null, reason: d.error || '책을 찾을 수 없음' });
+        }
       }
-      onProgress?.({ done: Math.min(i + BATCH, newIsbns.length), total: newIsbns.length });
+      onProgress?.({ done: Math.min(i + BATCH, toFetch.length), total: toFetch.length });
     }
 
-    const failed = newIsbns.length - lookupData.length;
-    if (!lookupData.length) return { added: 0, skipped, failed };
+    // lookup 후 isbn13 기준 중복 재확인 (ISBN 10자리로 조회한 경우)
+    const newLookupData = lookupData.filter(d => !existingSet.has(d.isbn13));
+    const skipped = preSkipped + (lookupData.length - newLookupData.length);
+    Object.assign(lookupData, newLookupData);
+    lookupData.length = newLookupData.length;
+    if (!lookupData.length) return { added: 0, skipped, failed: failedItems.length, failedItems };
 
     const books = lookupData.map(d => ({
       isbn13: d.isbn13, title: d.title, author: d.author,
@@ -179,7 +214,7 @@ export default function MainPage() {
       });
     })();
 
-    return { added: books.length, skipped, failed };
+    return { added: books.length, skipped, failed: failedItems.length, failedItems, titles: books.map(b => b.title) };
   }
 
   async function removeFromWishlist(isbn13) {
@@ -280,13 +315,23 @@ export default function MainPage() {
           />
         )}
       </main>
+
+      <footer style={styles.footer}>
+        <div style={styles.footerInner}>
+          <span>도서 정보 제공: <a href="https://www.aladin.co.kr" target="_blank" rel="noreferrer" style={styles.footerLink}>알라딘 오픈API</a></span>
+          <span style={styles.footerDivider}>·</span>
+          <span>이 서비스는 알라딘의 공식 서비스가 아닙니다</span>
+          <span style={styles.footerDivider}>·</span>
+          <span>문의: <a href="mailto:1111younik@gmail.com" style={styles.footerLink}>1111younik@gmail.com</a></span>
+        </div>
+      </footer>
     </div>
   );
 }
 
 const styles = {
-  wrapper: { minHeight: '100vh', background: '#f9f9f9' },
-  header: { background: '#0066cc', color: '#fff' },
+  wrapper: { minHeight: '100vh', background: '#f9f9f9', display: 'flex', flexDirection: 'column' },
+  header: { background: 'var(--color-primary)', color: '#fff' },
   headerInner: {
     maxWidth: '1100px', margin: '0 auto', padding: '12px 24px',
     display: 'flex', alignItems: 'center', gap: '12px',
@@ -294,17 +339,25 @@ const styles = {
   logo: { fontSize: '20px', fontWeight: 'bold' },
   headerSub: { fontSize: '13px', opacity: 0.85, flex: 1 },
   logoutBtn: { background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '5px 12px', fontSize: '13px' },
-  tabBar: { background: '#fff', borderBottom: '2px solid #0066cc', display: 'flex', padding: '0 24px' },
+  tabBar: { background: '#fff', borderBottom: '2px solid var(--color-primary)', display: 'flex', padding: '0 24px' },
   tab: {
     padding: '12px 24px', background: 'none', color: '#666',
     fontWeight: 'bold', fontSize: '14px',
     borderBottom: '2px solid transparent', marginBottom: '-2px',
     display: 'flex', alignItems: 'center', gap: '6px',
   },
-  tabActive: { color: '#0066cc', borderBottom: '2px solid #0066cc' },
+  tabActive: { color: 'var(--color-primary)', borderBottom: '2px solid var(--color-primary)' },
   badge: {
     background: '#e6003e', color: '#fff', borderRadius: '10px',
     padding: '1px 6px', fontSize: '11px', fontWeight: 'bold',
   },
-  main: { maxWidth: '1100px', margin: '0 auto', padding: '24px 60px' },
+  main: { maxWidth: '1100px', width: '100%', margin: '0 auto', padding: '24px 60px', flex: 1 },
+  footer: { background: '#f0f0f0', borderTop: '1px solid #ddd', marginTop: '48px' },
+  footerInner: {
+    maxWidth: '1100px', margin: '0 auto', padding: '16px 24px',
+    display: 'flex', alignItems: 'center', gap: '10px',
+    fontSize: '12px', color: '#888', flexWrap: 'wrap',
+  },
+  footerLink: { color: '#888', textDecoration: 'underline' },
+  footerDivider: { color: '#ccc' },
 };

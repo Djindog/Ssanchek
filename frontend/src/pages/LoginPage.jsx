@@ -77,7 +77,7 @@ const styles = {
   logo: {
     fontSize: '28px',
     fontWeight: 'bold',
-    color: '#0066cc',
+    color: 'var(--color-primary)',
     marginBottom: '8px',
   },
   sub: {
@@ -98,7 +98,7 @@ const styles = {
     width: '100%',
   },
   btn: {
-    background: '#0066cc',
+    background: 'var(--color-primary)',
     color: '#fff',
     padding: '11px',
     fontSize: '15px',
@@ -112,7 +112,7 @@ const styles = {
   },
   toggle: {
     background: 'none',
-    color: '#0066cc',
+    color: 'var(--color-primary)',
     fontSize: '13px',
     marginTop: '16px',
     textDecoration: 'underline',

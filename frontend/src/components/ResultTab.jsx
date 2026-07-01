@@ -10,7 +10,7 @@ const SELLER_TYPE_LABEL = {
 };
 
 const SELLER_TYPE_COLOR = {
-  new: '#0066cc',
+  new: 'var(--color-primary)',
   aladinUsed: '#e6003e',
   userUsed: '#555',
   spaceUsed: '#7b3fa0',
@@ -105,7 +105,7 @@ export default function ResultTab({ results }) {
               {SORT_OPTIONS.map(o => (
                 <div
                   key={o.value}
-                  style={{ ...styles.dropItem, fontWeight: sortKey === o.value ? 'bold' : 'normal', color: sortKey === o.value ? '#0066cc' : '#222' }}
+                  style={{ ...styles.dropItem, fontWeight: sortKey === o.value ? 'bold' : 'normal', color: sortKey === o.value ? 'var(--color-primary)' : '#222' }}
                   onClick={() => { setSortKey(o.value); setSortOpen(false); }}
                 >
                   {o.label}
@@ -293,13 +293,13 @@ const styles = {
   progressFill: {
     height: '100%',
     width: '40%',
-    background: '#0066cc',
+    background: 'var(--color-primary)',
     animation: 'slide 1.2s infinite ease-in-out',
   },
   bookSection: {
     background: '#fff',
     border: '1px solid #e8e8e8',
-    borderLeft: '4px solid #0066cc',
+    borderLeft: '4px solid var(--color-primary)',
     marginBottom: '14px',
   },
   bookHeader: {
@@ -325,13 +325,13 @@ const styles = {
     transition: 'color 0.1s',
   },
   bookTitleHover: {
-    color: '#0066cc',
+    color: 'var(--color-primary)',
     textDecoration: 'underline',
   },
   bookMeta: { fontSize: '12px', color: '#888', marginBottom: '8px' },
   newRow: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' },
   newBadge: {
-    background: '#0066cc',
+    background: 'var(--color-primary)',
     color: '#fff',
     padding: '2px 9px',
     fontSize: '12px',
@@ -339,11 +339,11 @@ const styles = {
     borderRadius: '20px',
   },
   newPrice: { fontWeight: 'bold', color: '#e6003e', fontSize: '15px' },
-  newShip: { fontSize: '12px', color: '#0066cc' },
+  newShip: { fontSize: '12px', color: 'var(--color-primary)' },
   newDiscount: { fontSize: '12px', color: '#888' },
   toggleBtn: {
     background: 'none',
-    color: '#0066cc',
+    color: 'var(--color-primary)',
     fontSize: '13px',
     whiteSpace: 'nowrap',
     alignSelf: 'center',
@@ -402,7 +402,7 @@ const styles = {
     alignItems: 'center',
     gap: '8px',
   },
-  check: { cursor: 'pointer', accentColor: '#0066cc' },
+  check: { cursor: 'pointer', accentColor: 'var(--color-primary)' },
   tr: { borderBottom: '1px solid #f0f0f0', transition: 'background 0.1s' },
   // 공통 셀: padding 줄여서 overflow 방지
   tdCell: {
@@ -439,10 +439,10 @@ const styles = {
   sellerLink: { color: '#333', textDecoration: 'none' },
   price: { color: '#e6003e', fontWeight: 'bold', fontSize: '14px' },
   discountSub: { fontSize: '12px', color: '#e6003e', opacity: 0.75 },
-  freeShip: { color: '#0066cc', fontWeight: 'bold', fontSize: '13px' },
+  freeShip: { color: 'var(--color-primary)', fontWeight: 'bold', fontSize: '13px' },
   spaceShip: { color: '#7b3fa0', fontSize: '12px', fontWeight: 'bold' },
   buyBtn: {
-    background: '#0066cc',
+    background: 'var(--color-primary)',
     color: '#fff',
     padding: '4px 10px',
     fontSize: '12px',
