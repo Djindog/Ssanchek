@@ -184,8 +184,8 @@ function DetailTable({ wishlist, globalCondition, globalSellerTypes, bookConditi
 
           return (
             <tr key={book.isbn13} style={{ borderBottom: '1px solid #f0f0f0' }}>
-              <td style={styles.dtd}>
-                <img src={book.cover} alt={book.title} style={{ width: '40px', display: 'block' }} />
+              <td style={{ ...styles.dtd, textAlign: 'center' }}>
+                <img src={book.cover} alt={book.title} style={{ width: '40px', display: 'inline-block' }} />
               </td>
               <td style={{ ...styles.dtd, maxWidth: '220px' }}>
                 <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#222', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -728,7 +728,7 @@ const styles = {
   detailTable: { width: '100%', borderCollapse: 'collapse' },
   dth: { padding: '8px 12px', fontWeight: 'bold', fontSize: '12px', color: '#555', borderBottom: '2px solid #eee', background: '#f8f8f8', textAlign: 'center' },
   dtd: { padding: '10px 12px', verticalAlign: 'middle' },
-  smallDropBtn: { border: '1px solid #ddd', background: '#fff', padding: '4px 8px', fontSize: '12px', cursor: 'pointer', borderRadius: '3px', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' },
+  smallDropBtn: { border: '1px solid #ddd', background: '#fff', padding: '4px 8px', fontSize: '12px', cursor: 'pointer', borderRadius: '3px', display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' },
   smallDropItem: { display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', cursor: 'pointer' },
 
   // 조합 분석 버튼

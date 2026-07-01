@@ -19,6 +19,13 @@ export default function MainPage() {
   const [comboLoading, setComboLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const TOAST_KEY = 'ssanchek_toast_v1';
+  const [showToast, setShowToast] = useState(() => !localStorage.getItem(TOAST_KEY));
+
+  function dismissToast() {
+    localStorage.setItem(TOAST_KEY, '1');
+    setShowToast(false);
+  }
 
   useEffect(() => {
     fetchWishlist().then(items => {
@@ -316,6 +323,20 @@ export default function MainPage() {
         )}
       </main>
 
+      {showToast && (
+        <div style={styles.toast}>
+          <div style={styles.toastHeader}>
+            <span style={styles.toastTitle}>업데이트 안내</span>
+            <button style={styles.toastClose} onClick={dismissToast}>✕</button>
+          </div>
+          <ul style={styles.toastList}>
+            <li>책 추가 시 탭이 자동으로 이동하지 않습니다. 위시리스트 탭 옆 뱃지의 <strong>···</strong> 가 수집 중 표시예요.</li>
+            <li>엑셀 가져오기에서 중고책도 이제 정상적으로 추가됩니다.</li>
+          </ul>
+          <button style={styles.toastBtn} onClick={dismissToast}>확인</button>
+        </div>
+      )}
+
       <footer style={styles.footer}>
         <div style={styles.footerInner}>
           <span>도서 정보 제공: <a href="https://www.aladin.co.kr" target="_blank" rel="noreferrer" style={styles.footerLink}>알라딘 오픈API</a></span>
@@ -360,4 +381,23 @@ const styles = {
   },
   footerLink: { color: '#888', textDecoration: 'underline' },
   footerDivider: { color: '#ccc' },
+  toast: {
+    position: 'fixed', bottom: '28px', right: '28px', zIndex: 1000,
+    background: '#fff', borderRadius: '10px', boxShadow: '0 6px 24px rgba(0,0,0,0.15)',
+    padding: '18px 20px', width: '300px',
+    animation: 'toast-in 0.3s ease',
+    borderLeft: '4px solid var(--color-primary)',
+  },
+  toastHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
+  toastTitle: { fontWeight: 'bold', fontSize: '14px', color: '#222' },
+  toastClose: { background: 'none', border: 'none', color: '#aaa', fontSize: '14px', cursor: 'pointer', padding: '0 2px', lineHeight: 1 },
+  toastList: {
+    paddingLeft: '16px', margin: '0 0 14px', display: 'flex', flexDirection: 'column', gap: '8px',
+    fontSize: '13px', color: '#444', lineHeight: '1.6',
+  },
+  toastBtn: {
+    width: '100%', background: 'var(--color-primary)', color: '#fff',
+    border: 'none', borderRadius: '6px', padding: '8px', fontSize: '13px',
+    fontWeight: 'bold', cursor: 'pointer',
+  },
 };

@@ -329,9 +329,9 @@ const styles = {
   meta: { fontSize: '12px', color: '#888' },
   tdPrice: { padding: '12px', textAlign: 'right', color: '#444', whiteSpace: 'nowrap' },
   salePrice: { color: '#e6003e', fontWeight: 'bold' },
-  tdAction: { padding: '12px', textAlign: 'center' },
-  btnAdd: { background: 'var(--color-primary)', color: '#fff', padding: '6px 14px', fontSize: '13px', cursor: 'pointer' },
-  btnAdded: { background: '#ccc', color: '#fff', padding: '6px 14px', fontSize: '13px', cursor: 'default' },
+  tdAction: { padding: '12px', textAlign: 'center', width: '120px' },
+  btnAdd: { background: 'var(--color-primary)', color: '#fff', padding: '6px 14px', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnAdded: { background: '#ccc', color: '#fff', padding: '6px 14px', fontSize: '13px', cursor: 'default', whiteSpace: 'nowrap' },
   empty: { color: '#888', textAlign: 'center', marginTop: '40px' },
 
   importBox: { padding: '4px 0' },
